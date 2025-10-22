@@ -2,10 +2,24 @@ import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { useAuth } from '../../store/useAuth';
 
 export default function LandingScreen({ navigation }) {
-  const handleJoinNow = () => {
-    navigation.navigate('Signup');
+  const { login } = useAuth();
+
+  const handleJoinNow = async () => {
+    // Instantly authenticate with a dummy user and let RootNavigator switch to tabs
+    const dummyUser = {
+      id: 'dev-user',
+      name: 'Developer',
+      email: 'dev@example.com',
+      createdAt: new Date().toISOString(),
+    };
+    try {
+      await login(dummyUser);
+    } catch (e) {
+      // no-op
+    }
   };
 
   const handleLogin = () => {
