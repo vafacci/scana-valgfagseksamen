@@ -43,7 +43,6 @@ export default function LoginScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Login</Text>
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
   scannerIcon: {
     width: 80,
     height: 80,
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',

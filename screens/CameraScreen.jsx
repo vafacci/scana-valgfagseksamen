@@ -2,11 +2,13 @@ import React, { useState, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { colors } from '../theme/colors';
+import { useScanHistory } from '../store/useScanHistory';
 
 export default function CameraScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState('back');
   const cameraRef = useRef(null);
+  const { addScan } = useScanHistory();
 
   if (!permission) {
     // Camera permissions are still loading
@@ -33,6 +35,15 @@ export default function CameraScreen({ navigation }) {
         const photo = await cameraRef.current.takePictureAsync();
         const productName = 'Apple AirPods Pro (2nd Gen)';
         
+        // Save scan to history
+        console.log('Saving scan to history:', { productName, photoUri: photo.uri });
+        await addScan({
+          productName,
+          photoUri: photo.uri,
+          price: '1,899 kr' // Default price, would normally come from API
+        });
+        console.log('Scan saved to history successfully');
+        
         navigation.replace('Results', { 
           productName, 
           photoUri: photo.uri 
@@ -51,7 +62,9 @@ export default function CameraScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Top Section */}
       <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Kamera</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.backArrow}>←</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Camera View */}
@@ -97,8 +110,15 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
   },
   topSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 10,
+  },
+  backArrow: {
+    color: colors.text,
+    fontSize: 24,
+    marginRight: 16,
   },
   topLabel: {
     color: colors.muted,

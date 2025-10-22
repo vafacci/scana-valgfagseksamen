@@ -38,9 +38,6 @@ export default function FavoritesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.topSection}>
-          <Text style={styles.topLabel}>Favorits</Text>
-        </View>
         <View style={styles.content}>
           <Text style={styles.title}>Loading...</Text>
         </View>
@@ -50,9 +47,6 @@ export default function FavoritesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Favorits</Text>
-      </View>
       
       <View style={styles.header}>
         <Text style={styles.title}>Dine favoritter</Text>
@@ -89,10 +83,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
   },
   topLabel: {
     color: colors.muted,

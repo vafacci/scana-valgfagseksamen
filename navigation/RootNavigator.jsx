@@ -24,16 +24,10 @@ function TabNavigator() {
       style={styles.scanButton}
       onPress={() => navigation.navigate('Camera')}
     >
-      <View style={styles.scanButtonInner}>
-        <View style={styles.scanIcon}>
-          <View style={styles.scanCorners}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-          </View>
-        </View>
+      <View style={styles.whiteSquare}>
+        <Text style={styles.scanIcon}>📷</Text>
       </View>
+      <Text style={styles.scanLabel}>Scan</Text>
     </TouchableOpacity>
   );
 
@@ -62,7 +56,7 @@ function TabNavigator() {
         name="HomeTab"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Home',
+          tabBarLabel: 'Hjem',
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>🏠</Text>
           ),
@@ -73,9 +67,9 @@ function TabNavigator() {
         name="FavoritesTab"
         component={FavoritesScreen}
         options={{
-          tabBarLabel: 'Favorits',
+          tabBarLabel: 'Favoritter',
           tabBarIcon: ({ color }) => (
-            <Text style={[styles.tabIcon, { color }]}>♡</Text>
+            <Text style={[styles.tabIcon, { color }]}>❤️</Text>
           ),
         }}
       />
@@ -94,7 +88,7 @@ function TabNavigator() {
         name="ProfileTab"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Profil',
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>👤</Text>
           ),
@@ -105,7 +99,7 @@ function TabNavigator() {
         name="SettingsTab"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Settings',
+          tabBarLabel: 'Indstillinger',
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>⚙</Text>
           ),
@@ -145,59 +139,26 @@ const styles = StyleSheet.create({
   scanButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    paddingVertical: 8,
   },
-  scanButtonInner: {
-    width: 60,
-    height: 60,
-    backgroundColor: colors.primary,
-    borderRadius: 30,
+  whiteSquare: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'white',
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 4,
   },
   scanIcon: {
-    width: 30,
-    height: 30,
-    backgroundColor: colors.text,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
+    fontSize: 20,
+    color: colors.primary,
   },
-  scanCorners: {
-    width: 30,
-    height: 30,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
+  scanLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: colors.muted,
+    marginTop: 2,
   },
   tabIcon: {
     fontSize: 20,

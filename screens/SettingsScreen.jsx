@@ -140,9 +140,6 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Settings</Text>
-      </View>
       {renderScreenContent()}
     </SafeAreaView>
   );
@@ -152,10 +149,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
-  },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
   },
   topLabel: {
     color: colors.muted,

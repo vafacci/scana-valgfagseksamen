@@ -7,7 +7,6 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={styles.container}>
       {/* Top Section */}
       <View style={styles.topSection}>
-        <Text style={styles.topLabel}>homepage</Text>
       </View>
 
       {/* Main Content Card */}
@@ -50,7 +49,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.actionIcon}>
             <Text style={styles.actionIconText}>✓</Text>
           </View>
-          <Text style={styles.actionLabel}>Receive</Text>
+          <Text style={styles.actionLabel}>Prisliste</Text>
         </View>
         
         <View style={styles.actionItem}>
@@ -70,10 +69,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
   topLabel: {
     color: colors.muted,
     fontSize: 14,
@@ -89,16 +84,16 @@ const styles = StyleSheet.create({
   scannerIcon: {
     width: 80,
     height: 80,
-    backgroundColor: colors.text,
+    backgroundColor: colors.primary,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
+
   scannerInner: {
     width: 40,
     height: 40,
-    backgroundColor: colors.primary,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',

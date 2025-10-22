@@ -57,7 +57,6 @@ export default function ResultsScreen({ navigation, route }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.topLabel}>Pricerunner</Text>
       </View>
 
       {/* Header */}
