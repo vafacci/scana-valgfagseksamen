@@ -1,19 +1,88 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { useScanHistory } from '../store/useScanHistory';
+
+// Mock AI Product Recognition Database
+const AI_PRODUCT_DATABASE = {
+  'airpods': {
+    name: 'Apple AirPods Pro (2nd Gen)',
+    price: '1,899 kr',
+    category: 'Electronics',
+    description: 'Active noise cancellation with Adaptive Transparency',
+    image: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361',
+    confidence: 0.95
+  },
+  'samsung_buds': {
+    name: 'Samsung Galaxy Buds Pro',
+    price: '1,299 kr',
+    category: 'Electronics',
+    description: 'Active noise cancellation and ambient sound',
+    image: 'https://images.samsung.com/is/image/samsung/p6pim/dk/2101/gallery/dk-galaxy-buds-pro-sm-r190nzkaxeu-368338267',
+    confidence: 0.92
+  },
+  'sony_headphones': {
+    name: 'Sony WH-1000XM4',
+    price: '2,499 kr',
+    category: 'Electronics',
+    description: 'Industry-leading noise canceling with Dual Noise Sensor technology',
+    image: 'https://www.sony.com/image/4c4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b',
+    confidence: 0.88
+  },
+  'iphone': {
+    name: 'iPhone 15 Pro',
+    price: '9,999 kr',
+    category: 'Electronics',
+    description: 'Titanium design with A17 Pro chip',
+    image: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1693009279823',
+    confidence: 0.97
+  }
+};
 
 export default function CameraScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState('back');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingStep, setProcessingStep] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
   const cameraRef = useRef(null);
   const { addScan } = useScanHistory();
+  
+  // Animation values
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const successScaleAnim = useRef(new Animated.Value(0)).current;
+  const successRotateAnim = useRef(new Animated.Value(0)).current;
+  const confettiAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
 
-  if (!permission) {
-    // Camera permissions are still loading
-    return <View />;
-  }
+  const triggerConfetti = () => {
+    const animations = confettiAnimations.map((anim, index) => {
+      return Animated.sequence([
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 300 + (index * 100),
+          useNativeDriver: true,
+        }),
+        Animated.timing(anim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ]);
+    });
+    
+    Animated.parallel(animations).start();
+  };
 
   if (!permission.granted) {
     // Camera permissions are not granted yet
@@ -29,28 +98,230 @@ export default function CameraScreen({ navigation }) {
     );
   }
 
-  const takePicture = async () => {
+  // Real AI Image Recognition Function using Uncle's API
+  const analyzeImageWithAI = async (imageUri) => {
+    setProcessingStep('Forbereder billede...');
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('Sending image to AI API...', imageUri);
+    setProcessingStep('Sender til AI API...');
+    
+    // Create FormData for image upload
+    const formData = new FormData();
+    formData.append('image', {
+      uri: imageUri,
+      type: 'image/jpeg',
+      name: 'product_image.jpg',
+    });
+    
+    setProcessingStep('AI analyserer produktet...');
+    
+    // Call your uncle's AI recognition API
+    const response = await fetch('https://your-uncles-api.com/recognize', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        // Add any API key or authentication headers here
+        // 'Authorization': 'Bearer YOUR_API_KEY',
+      },
+    });
+    
+    setProcessingStep('Behandler resultat...');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    const result = await response.json();
+    console.log('AI API Response:', result);
+    
+    setProcessingStep('Færdig!');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    return result;
+  };
+
+  const takePictureAndAnalyze = async () => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    setProcessingStep('Tager billede...');
+    
     if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync();
-        const productName = 'Apple AirPods Pro (2nd Gen)';
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+      
+      console.log('Photo taken, analyzing with AI...', photo.uri);
+      setProcessingStep('Forbereder...');
+      await new Promise(resolve => setTimeout(resolve, 600));
+      
+      setProcessingStep('Sender til AI...');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setProcessingStep('AI analyserer...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setProcessingStep('Behandler data...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setProcessingStep('Fundet!');
+      setShowSuccess(true);
+      
+      // Trigger confetti immediately
+      triggerConfetti();
+      
+      // Start pulse animation for success icon
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+      
+      // Success animation
+      Animated.parallel([
+        Animated.spring(successScaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(successRotateAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        })
+      ]).start();
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Use AirPods as demo product
+      const demoProduct = AI_PRODUCT_DATABASE['airpods'];
+      
+      // Save scan to history
+      await addScan({
+        productName: demoProduct.name,
+        price: demoProduct.price,
+        category: demoProduct.category,
+        description: demoProduct.description,
+        image: demoProduct.image,
+        confidence: 0.95,
+        photoUri: photo.uri
+      });
+      
+      // Navigate to results
+      navigation.replace('Results', { 
+        product: demoProduct,
+        analysis: { confidence: 0.95 },
+        photoUri: photo.uri
+      });
+    }
+  };
+
+  const pickImageFromAlbum = async () => {
+    if (isProcessing) return;
+    
+    setIsProcessing(true);
+    setProcessingStep('Åbner album...');
+    
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const imageUri = result.assets[0].uri;
+        
+        setProcessingStep('Forbereder...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        setProcessingStep('Sender til AI...');
+        await new Promise(resolve => setTimeout(resolve, 700));
+        
+        setProcessingStep('AI analyserer...');
+        await new Promise(resolve => setTimeout(resolve, 900));
+        
+        setProcessingStep('Behandler data...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        setProcessingStep('Fundet!');
+        setShowSuccess(true);
+        
+        // Trigger confetti immediately
+        triggerConfetti();
+        
+        // Start pulse animation for success icon
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(pulseAnim, {
+              toValue: 1.3,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseAnim, {
+              toValue: 1,
+              duration: 600,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+        
+        // Success animation
+        Animated.parallel([
+          Animated.spring(successScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+          Animated.timing(successRotateAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          })
+        ]).start();
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Use Samsung Buds as demo product for album images
+        const demoProduct = AI_PRODUCT_DATABASE['samsung_buds'];
         
         // Save scan to history
-        console.log('Saving scan to history:', { productName, photoUri: photo.uri });
         await addScan({
-          productName,
-          photoUri: photo.uri,
-          price: '1,899 kr' // Default price, would normally come from API
+          productName: demoProduct.name,
+          price: demoProduct.price,
+          category: demoProduct.category,
+          description: demoProduct.description,
+          image: demoProduct.image,
+          confidence: 0.92,
+          photoUri: imageUri
         });
-        console.log('Scan saved to history successfully');
         
+        // Navigate to results
         navigation.replace('Results', { 
-          productName, 
-          photoUri: photo.uri 
+          product: demoProduct,
+          analysis: { confidence: 0.92 },
+          photoUri: imageUri
         });
-      } catch (error) {
-        Alert.alert('Error', 'Failed to take picture');
+      } else {
+        setIsProcessing(false);
+        setProcessingStep('');
       }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      setIsProcessing(false);
+      setProcessingStep('');
     }
   };
 
@@ -74,7 +345,7 @@ export default function CameraScreen({ navigation }) {
           facing={facing}
           ref={cameraRef}
         >
-          {/* Scanning overlay */}
+          {/* AI Scanning overlay */}
           <View style={styles.scanOverlay}>
             <View style={styles.scanFrame}>
               <View style={[styles.corner, styles.topLeft]} />
@@ -82,21 +353,116 @@ export default function CameraScreen({ navigation }) {
               <View style={[styles.corner, styles.bottomLeft]} />
               <View style={[styles.corner, styles.bottomRight]} />
             </View>
+            <Text style={styles.scanInstruction}>
+              Ret kameraet mod produktet og tryk på den hvide knap, eller vælg et billede fra albummet
+            </Text>
+            {isProcessing && (
+              <View style={styles.processingOverlay}>
+                {!showSuccess ? (
+                  <>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.processingText}>{processingStep}</Text>
+                    <View style={styles.progressSteps}>
+                      <View style={[styles.step, processingStep.includes('Tager') && styles.stepActive]} />
+                      <View style={[styles.step, processingStep.includes('Forbereder') && styles.stepActive]} />
+                      <View style={[styles.step, processingStep.includes('Sender') && styles.stepActive]} />
+                      <View style={[styles.step, processingStep.includes('AI analyserer') && styles.stepActive]} />
+                      <View style={[styles.step, processingStep.includes('Behandler') && styles.stepActive]} />
+                      <View style={[styles.step, processingStep.includes('Fundet') && styles.stepActive]} />
+                    </View>
+                  </>
+                ) : (
+                  <Animated.View style={[
+                    styles.successContainer,
+                    {
+                      transform: [
+                        { scale: successScaleAnim },
+                        { 
+                          rotateZ: successRotateAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0deg', '360deg'],
+                          })
+                        }
+                      ]
+                    }
+                  ]}>
+                    <Animated.Text style={[
+                      styles.successIcon,
+                      {
+                        transform: [{ scale: pulseAnim }]
+                      }
+                    ]}>✨</Animated.Text>
+                    <Text style={styles.successText}>Produkt fundet!</Text>
+                    <Text style={styles.successSubtext}>Navigerer til resultater...</Text>
+                  </Animated.View>
+                )}
+                
+                {/* Confetti Elements */}
+                {showSuccess && confettiAnimations.map((anim, index) => (
+                  <Animated.View
+                    key={index}
+                    style={[
+                      styles.confetti,
+                      {
+                        left: `${10 + (index * 12)}%`,
+                        transform: [
+                          {
+                            translateY: anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, -300],
+                            }),
+                          },
+                          {
+                            rotate: anim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ['0deg', '720deg'],
+                            }),
+                          },
+                          {
+                            scale: anim.interpolate({
+                              inputRange: [0, 0.5, 1],
+                              outputRange: [0, 1.2, 0.8],
+                            }),
+                          },
+                        ],
+                        opacity: anim,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.confettiEmoji}>
+                      {['🎉', '✨', '🎊', '💫', '⭐', '🌟', '💎', '🔥'][index]}
+                    </Text>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
           </View>
         </CameraView>
       </View>
 
       {/* Camera Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.controlButton}>
+        <TouchableOpacity 
+          style={styles.controlButton}
+          onPress={pickImageFromAlbum}
+          disabled={isProcessing}
+        >
           <Text style={styles.controlIcon}>📷</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.shutterButton} onPress={takePicture}>
+        <TouchableOpacity 
+          style={[styles.shutterButton, isProcessing && styles.shutterButtonDisabled]} 
+          onPress={takePictureAndAnalyze}
+          disabled={isProcessing}
+        >
           <View style={styles.shutterInner} />
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.controlButton} onPress={toggleCameraFacing}>
+        <TouchableOpacity 
+          style={styles.controlButton} 
+          onPress={toggleCameraFacing}
+          disabled={isProcessing}
+        >
           <Text style={styles.controlIcon}>🔄</Text>
         </TouchableOpacity>
       </View>
@@ -167,6 +533,89 @@ const styles = StyleSheet.create({
     height: 250,
     position: 'relative',
   },
+  scanInstruction: {
+    color: colors.text,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 30,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  processingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  processingText: {
+    color: colors.text,
+    fontSize: 16,
+    marginTop: 16,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  processingSubtext: {
+    color: colors.muted,
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  progressSteps: {
+    flexDirection: 'row',
+    marginTop: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  step: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.muted,
+    marginHorizontal: 4,
+    opacity: 0.3,
+  },
+  stepActive: {
+    backgroundColor: colors.primary,
+    opacity: 1,
+    transform: [{ scale: 1.2 }],
+  },
+  successContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successIcon: {
+    fontSize: 60,
+    marginBottom: 16,
+  },
+  successText: {
+    color: colors.text,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successSubtext: {
+    color: colors.muted,
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  confetti: {
+    position: 'absolute',
+    top: '50%',
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confettiEmoji: {
+    fontSize: 24,
+  },
   corner: {
     position: 'absolute',
     width: 20,
@@ -213,9 +662,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  controlIcon: {
-    fontSize: 20,
-  },
   shutterButton: {
     width: 70,
     height: 70,
@@ -225,6 +671,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 4,
     borderColor: colors.text,
+  },
+  shutterButtonDisabled: {
+    backgroundColor: '#666',
+    borderColor: '#999',
   },
   shutterInner: {
     width: 50,

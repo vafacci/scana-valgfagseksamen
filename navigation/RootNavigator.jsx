@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
+import * as Haptics from 'expo-haptics';
 import { colors } from '../theme/colors';
 import { useAuth } from '../store/useAuth';
 import AuthNavigator from './AuthNavigator';
@@ -33,10 +34,27 @@ function TabNavigator() {
       profile: new Animated.Value(1),
       settings: new Animated.Value(1),
     }).current;
-
+    
+    // Morphing icon animations
+    const iconMorphAnimations = useRef({
+      home: new Animated.Value(0),
+      favorites: new Animated.Value(0),
+      scan: new Animated.Value(0),
+      profile: new Animated.Value(0),
+      settings: new Animated.Value(0),
+    }).current;
+    
     // Removed problematic wave animation
 
     const animateButtonPress = (buttonKey) => {
+      // Haptic feedback
+      if (buttonKey === 'scan') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      
+      // Button scale animation
       Animated.sequence([
         Animated.timing(buttonAnimations[buttonKey], {
           toValue: 0.8,
@@ -50,6 +68,23 @@ function TabNavigator() {
           useNativeDriver: true,
         }),
       ]).start();
+      
+      // Icon morphing animation (only for scan)
+      if (buttonKey === 'scan') {
+        const morphDuration = 600;
+        Animated.sequence([
+          Animated.timing(iconMorphAnimations[buttonKey], {
+            toValue: 1,
+            duration: morphDuration,
+            useNativeDriver: true,
+          }),
+          Animated.timing(iconMorphAnimations[buttonKey], {
+            toValue: 0,
+            duration: morphDuration,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }
     };
 
     const handleNavigation = (screenName, buttonKey) => {
@@ -81,7 +116,7 @@ function TabNavigator() {
       <Animated.View style={[styles.waveContainer, { transform: [{ scale: scaleAnim }] }]}>
         <Svg height="100" width={screenWidth} style={styles.waveSvg}>
           <Path
-            d={`M0,5 L${screenWidth/2 - 80},5 Q${screenWidth/2 - 60},5 ${screenWidth/2 - 50},25 Q${screenWidth/2 - 30},75 ${screenWidth/2},75 Q${screenWidth/2 + 30},75 ${screenWidth/2 + 50},25 Q${screenWidth/2 + 60},5 ${screenWidth/2 +80},5 L${screenWidth},5 L${screenWidth},100 L0,100 Z`}
+            d={`M0,15 L${screenWidth/2 - 80},15 Q${screenWidth/2 - 60},15 ${screenWidth/2 - 50},35 Q${screenWidth/2 - 30},85 ${screenWidth/2},85 Q${screenWidth/2 + 30},85 ${screenWidth/2 + 50},35 Q${screenWidth/2 + 60},15 ${screenWidth/2 +80},15 L${screenWidth},15 L${screenWidth},100 L0,100 Z`}
             fill="white"
           />
         </Svg>
@@ -94,20 +129,34 @@ function TabNavigator() {
               style={styles.navItem} 
               onPress={() => handleNavigation('HomeTab', 'home')}
             >
-              <Animated.View style={{ transform: [{ scale: buttonAnimations.home }] }}>
-                <Text style={styles.tabIcon}>🏠</Text>
-                <Text style={styles.tabLabel}>Hjem</Text>
-              </Animated.View>
+              <View style={styles.buttonContainer}>
+                
+                <Animated.View style={{ 
+                  transform: [
+                    { scale: buttonAnimations.home }
+                  ] 
+                }}>
+                  <Text style={styles.tabIcon}>🏠</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 12 }]}>Hjem</Text>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.navItem} 
               onPress={() => handleNavigation('FavoritesTab', 'favorites')}
             >
-              <Animated.View style={{ transform: [{ scale: buttonAnimations.favorites }] }}>
-                <Text style={styles.tabIcon}>❤️</Text>
-                <Text style={styles.tabLabel}>Favoritter</Text>
-              </Animated.View>
+              <View style={styles.buttonContainer}>
+                
+                <Animated.View style={{ 
+                  transform: [
+                    { scale: buttonAnimations.favorites }
+                  ] 
+                }}>
+                  <Text style={styles.tabIcon}>❤️</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 4 }]}>Favoritter</Text>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -116,7 +165,31 @@ function TabNavigator() {
             style={styles.scanButton}
             onPress={() => handleNavigation('Camera', 'scan')}
           >
-            <Animated.View style={{ transform: [{ scale: buttonAnimations.scan }] }}>
+            <View style={styles.scanButtonContainer}>
+              
+              <Animated.View style={{ 
+                transform: [
+                  { scale: buttonAnimations.scan },
+                  { 
+                    rotateZ: iconMorphAnimations.scan.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '720deg'],
+                    })
+                  },
+                  {
+                    scaleX: iconMorphAnimations.scan.interpolate({
+                      inputRange: [0, 0.3, 0.7, 1],
+                      outputRange: [1, 1.1, 0.9, 1],
+                    })
+                  },
+                  {
+                    scaleY: iconMorphAnimations.scan.interpolate({
+                      inputRange: [0, 0.3, 0.7, 1],
+                      outputRange: [1, 0.9, 1.1, 1],
+                    })
+                  }
+                ] 
+              }}>
               <View style={styles.scannerIcon}>
                 <View style={styles.scannerInner}>
                   <View style={styles.scannerCorners}>
@@ -128,7 +201,8 @@ function TabNavigator() {
                 </View>
               </View>
               <Text style={styles.scanLabel}>Scan</Text>
-            </Animated.View>
+              </Animated.View>
+            </View>
           </TouchableOpacity>
 
           {/* Right Side Items */}
@@ -137,20 +211,34 @@ function TabNavigator() {
               style={styles.navItem} 
               onPress={() => handleNavigation('ProfileTab', 'profile')}
             >
-              <Animated.View style={{ transform: [{ scale: buttonAnimations.profile }] }}>
-                <Text style={styles.tabIcon}>👤</Text>
-                <Text style={styles.tabLabel}>Profil</Text>
-              </Animated.View>
+              <View style={styles.buttonContainer}>
+                
+                <Animated.View style={{ 
+                  transform: [
+                    { scale: buttonAnimations.profile }
+                  ] 
+                }}>
+                  <Text style={styles.tabIcon}>👤</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 10 }]}>Profil</Text>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.navItem} 
               onPress={() => handleNavigation('SettingsTab', 'settings')}
             >
-              <Animated.View style={{ transform: [{ scale: buttonAnimations.settings }] }}>
-                <Text style={styles.tabIcon}>⚙</Text>
-                <Text style={styles.tabLabel}>Indstillinger</Text>
-              </Animated.View>
+              <View style={styles.buttonContainer}>
+                
+                <Animated.View style={{ 
+                  transform: [
+                    { scale: buttonAnimations.settings }
+                  ] 
+                }}>
+                  <Text style={styles.tabIcon}>⚙</Text>
+                  <Text style={styles.tabLabel}>Indstillinger</Text>
+                </Animated.View>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -169,6 +257,38 @@ function TabNavigator() {
           opacity: 0,
         },
         tabBarButton: () => null,
+        animationEnabled: true,
+        animationTypeForReplace: 'push',
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width * 0.3, 0],
+                  }),
+                },
+                {
+                  rotateY: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['15deg', '0deg'],
+                  }),
+                },
+                {
+                  scale: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.95, 1],
+                  }),
+                },
+              ],
+              opacity: current.progress.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0, 0.8, 1],
+              }),
+            },
+          };
+        },
       }}
       tabBar={(props) => <WaveNavigationBar {...props} />}
     >
@@ -180,6 +300,36 @@ function TabNavigator() {
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>🏠</Text>
           ),
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-layouts.screen.width * 0.2, 0],
+                    }),
+                  },
+                  {
+                    rotateZ: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['-5deg', '0deg'],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 0.3, 1],
+                  outputRange: [0, 0.7, 1],
+                }),
+              },
+            };
+          },
         }}
       />
       
@@ -191,6 +341,36 @@ function TabNavigator() {
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>❤️</Text>
           ),
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.height * 0.1, 0],
+                    }),
+                  },
+                  {
+                    rotateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['10deg', '0deg'],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.85, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 0.4, 1],
+                  outputRange: [0, 0.6, 1],
+                }),
+              },
+            };
+          },
         }}
       />
       
@@ -212,6 +392,36 @@ function TabNavigator() {
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>👤</Text>
           ),
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width * 0.2, 0],
+                    }),
+                  },
+                  {
+                    rotateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['-15deg', '0deg'],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 0.2, 1],
+                  outputRange: [0, 0.8, 1],
+                }),
+              },
+            };
+          },
         }}
       />
       
@@ -223,6 +433,36 @@ function TabNavigator() {
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>⚙</Text>
           ),
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-layouts.screen.height * 0.1, 0],
+                    }),
+                  },
+                  {
+                    rotateZ: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['5deg', '0deg'],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0, 0.5, 1],
+                }),
+              },
+            };
+          },
         }}
       />
     </Tab.Navigator>
@@ -252,9 +492,40 @@ export default function RootNavigator() {
         headerShown: false,
         contentStyle: { backgroundColor: '#0F1B2B' },
         animation: 'slide_from_right',
-        animationDuration: 300,
+        animationDuration: 400,
         gestureEnabled: true,
         gestureDirection: 'horizontal',
+        presentation: 'card',
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+                {
+                  rotateY: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['45deg', '0deg'],
+                  }),
+                },
+                {
+                  scale: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+              opacity: current.progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 1],
+              }),
+            },
+          };
+        },
       }}
     >
       <Stack.Screen 
@@ -262,7 +533,7 @@ export default function RootNavigator() {
         component={TabNavigator}
         options={{
           animation: 'fade',
-          animationDuration: 400,
+          animationDuration: 500,
         }}
       />
       <Stack.Screen 
@@ -270,9 +541,39 @@ export default function RootNavigator() {
         component={CameraScreen}
         options={{
           animation: 'slide_from_bottom',
-          animationDuration: 350,
+          animationDuration: 450,
           gestureEnabled: true,
           gestureDirection: 'vertical',
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateY: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.height, 0],
+                    }),
+                  },
+                  {
+                    rotateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['-30deg', '0deg'],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.9, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            };
+          },
         }}
       />
       <Stack.Screen 
@@ -280,7 +581,7 @@ export default function RootNavigator() {
         component={ResultsScreen}
         options={{
           animation: 'slide_from_right',
-          animationDuration: 300,
+          animationDuration: 400,
           gestureEnabled: true,
         }}
       />
@@ -411,20 +712,26 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   scanLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.primary,
-    marginTop: 4,
+    marginTop: 8,
     textAlign: 'center',
     width: 65,
   },
   tabIcon: {
-    fontSize: 20,
+    fontSize: 16,
     marginBottom: 4,
+    marginLeft: 12,
   },
   tabLabel: {
     fontSize: 9,
     fontWeight: '500',
     color: '#999999',
+  },
+  buttonContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

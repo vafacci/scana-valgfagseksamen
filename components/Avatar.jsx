@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors } from '../theme/colors';
 
-export default function Avatar({ name, subtitle, size = 60 }) {
+export default function Avatar({ name, subtitle, size = 60, imageUrl }) {
   const initials = name
     .split(' ')
     .map(word => word[0])
@@ -12,9 +12,17 @@ export default function Avatar({ name, subtitle, size = 60 }) {
   return (
     <View style={styles.container}>
       <View style={[styles.avatar, { width: size, height: size }]}>
-        <Text style={[styles.initials, { fontSize: size * 0.4 }]}>
-          {initials}
-        </Text>
+        {imageUrl ? (
+          <Image 
+            source={{ uri: imageUrl }} 
+            style={[styles.avatarImage, { width: size, height: size, borderRadius: size / 2 }]}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={[styles.initials, { fontSize: size * 0.4 }]}>
+            {initials}
+          </Text>
+        )}
       </View>
       <View style={styles.textContainer}>
         <Text style={styles.name}>{name}</Text>
@@ -39,6 +47,9 @@ const styles = StyleSheet.create({
   initials: {
     color: colors.text,
     fontWeight: 'bold',
+  },
+  avatarImage: {
+    borderRadius: 30,
   },
   textContainer: {
     flex: 1,

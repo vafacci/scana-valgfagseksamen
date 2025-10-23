@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../store/useAuth';
 import GradientButton from '../components/GradientButton';
@@ -23,9 +22,9 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
     // TODO: Navigate to add user screen
   };
 
-  const handleDeleteAccount = () => {
-    console.log('Delete account pressed');
-    // TODO: Implement delete account functionality
+  const handleDeleteProfile = () => {
+    console.log('Delete profile pressed');
+    // TODO: Implement delete profile functionality
   };
 
   const renderModalContent = () => (
@@ -56,15 +55,20 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
           <Text style={styles.buttonText}>Tilføj ny bruger</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton} onPress={handleDeleteAccount}>
-          <Text style={[styles.buttonText, styles.deleteText]}>Slet konto</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={handleDeleteProfile}>
+          <Text style={[styles.buttonText, styles.deleteText]}>Slet profil</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   const renderScreenContent = () => (
-    <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={styles.scrollView} 
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      bounces={true}
+    >
       {/* Large Heading */}
       <View style={styles.header}>
         <Text style={styles.title}>Indstillinger</Text>
@@ -102,17 +106,11 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
         <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.linkText}>Log ud</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleDeleteProfile}>
+          <Text style={[styles.linkText, styles.deleteText]}>Slet profil</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* QR Code */}
-      <View style={styles.qrContainer}>
-        <QRCode
-          value="scana://user/mads-jensen"
-          size={200}
-          color={colors.text}
-          backgroundColor="transparent"
-        />
-      </View>
 
       {/* Footer Text */}
       <View style={styles.footer}>
@@ -140,7 +138,9 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {renderScreenContent()}
+      <View style={styles.screenWrapper}>
+        {renderScreenContent()}
+      </View>
     </SafeAreaView>
   );
 }
@@ -149,6 +149,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  screenWrapper: {
+    flex: 1,
   },
   topLabel: {
     color: colors.muted,
@@ -198,6 +201,7 @@ const styles = StyleSheet.create({
   buttonsContainer: {
     paddingHorizontal: 20,
     gap: 16,
+    marginTop: 30,
   },
   actionButton: {
     backgroundColor: colors.primary,
@@ -218,9 +222,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 30,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 100, // Extra space for navigation bar
+  },
   linksContainer: {
     paddingHorizontal: 20,
     marginBottom: 40,
+    marginTop: 40,
   },
   linkText: {
     fontSize: 16,
@@ -229,13 +238,10 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     textAlign: 'center',
   },
-  qrContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
   footer: {
     paddingHorizontal: 20,
     paddingBottom: 40,
+    marginBottom: 20,
   },
   footerText: {
     fontSize: 16,

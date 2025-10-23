@@ -30,9 +30,10 @@ export default function ProfileScreen({ navigation }) {
         {/* Header with Avatar and Gear */}
         <View style={styles.header}>
           <Avatar 
-            name="Mads Jensen" 
+            name="Mads Mikkelsen" 
             subtitle="Member since Jan 2025"
             size={60}
+            imageUrl="https://image.euroman.dk/5630446.webp?imageId=5630446&x=0.00&y=2.20&cropw=100.00&croph=95.59&width=1200&height=684&format=jpg"
           />
           <TouchableOpacity 
             style={styles.gearButton}

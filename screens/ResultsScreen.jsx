@@ -5,16 +5,25 @@ import { useFavorites } from '../store/useFavorites';
 import priceData from '../data/prices.json';
 
 export default function ResultsScreen({ navigation, route }) {
-  const { productName, photoUri } = route.params || {};
+  const { product, barcode, productName, photoUri } = route.params || {};
   const { toggleFavorite, isFavorite } = useFavorites();
   
-  // Find the product in our mock data
-  const product = priceData.find(item => 
-    item.name === productName || item.name === 'Apple AirPods Pro (2nd Gen)'
+  // Use product data from barcode scan or fallback to mock data
+  const productData = product || {
+    name: productName || 'Apple AirPods Pro (2nd Gen)',
+    price: '1,899 kr',
+    category: 'Electronics',
+    description: 'Active noise cancellation with Adaptive Transparency',
+    image: photoUri || 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361'
+  };
+  
+  // Find the product in our mock data for price comparison
+  const priceComparison = priceData.find(item => 
+    item.name === productData.name || item.name === 'Apple AirPods Pro (2nd Gen)'
   );
   
   // Sort offers by price (ascending)
-  const sortedOffers = product?.offers.sort((a, b) => a.price - b.price) || [];
+  const sortedOffers = priceComparison?.offers.sort((a, b) => a.price - b.price) || [];
 
   const renderOfferItem = ({ item }) => {
     const favorite = isFavorite(item);
@@ -69,10 +78,21 @@ export default function ResultsScreen({ navigation, route }) {
 
       {/* Product Info */}
       <View style={styles.productInfo}>
-        <Text style={styles.productName}>{productName || 'Apple AirPods Pro (2nd Gen)'}</Text>
-        {photoUri && (
-          <Image source={{ uri: photoUri }} style={styles.photoPreview} />
-        )}
+        <View style={styles.productHeader}>
+          <View style={styles.productTextInfo}>
+            <Text style={styles.productName}>{productData.name}</Text>
+            <Text style={styles.productCategory}>{productData.category}</Text>
+            <Text style={styles.productDescription}>{productData.description}</Text>
+            {barcode && (
+              <Text style={styles.barcodeInfo}>Barcode: {barcode}</Text>
+            )}
+          </View>
+          <Image 
+            source={{ uri: productData.image }} 
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        </View>
       </View>
 
       {/* Price List */}
@@ -129,16 +149,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 20,
   },
+  productHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  productTextInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
   productName: {
     fontSize: 20,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
-  photoPreview: {
+  productCategory: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  productDescription: {
+    fontSize: 14,
+    color: colors.muted,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  barcodeInfo: {
+    fontSize: 12,
+    color: colors.muted,
+    fontFamily: 'monospace',
+  },
+  productImage: {
     width: 100,
     height: 100,
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: colors.card,
   },
   priceListContainer: {
