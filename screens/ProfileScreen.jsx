@@ -57,13 +57,28 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.loadingText}>Loading...</Text>
           ) : scanHistory.length > 0 ? (
             scanHistory.map((scan) => (
-              <ListItem
-                key={scan.id}
-                thumbnail=""
-                title={scan.productName}
-                date={scan.date}
-                price={scan.price}
-              />
+              <View key={scan.id} style={styles.scanCard}>
+                <View style={styles.scanCardHeader}>
+                  <Text style={styles.scanCardTitle}>{scan.productName}</Text>
+                  <TouchableOpacity style={styles.removeButton}>
+                    <Text style={styles.removeIcon}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.scanCardContent}>
+                  <View style={styles.scanCardLeft}>
+                    <Text style={styles.scanCardStore}>Proshop</Text>
+                    <Text style={styles.scanCardShipping}>Fragt: 29 kr</Text>
+                    <Text style={styles.scanCardEta}>2-4 dage</Text>
+                    <Text style={styles.scanCardRating}>✰ 4.4 (1800)</Text>
+                    <Text style={styles.scanCardDate}>Tilføjet: {new Date(scan.date).toLocaleDateString('da-DK')}</Text>
+                  </View>
+                  
+                  <View style={styles.scanCardRight}>
+                    <Text style={styles.scanCardPrice}>{scan.price}</Text>
+                  </View>
+                </View>
+              </View>
             ))
           ) : (
             <Text style={styles.emptyText}>No scans yet. Start scanning to see your history here!</Text>
@@ -133,5 +148,80 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 20,
     fontStyle: 'italic',
+  },
+  scanCard: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  scanCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  scanCardTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+    flex: 1,
+  },
+  removeButton: {
+    padding: 4,
+  },
+  removeIcon: {
+    fontSize: 18,
+    color: '#FF3B30',
+    fontWeight: 'bold',
+  },
+  scanCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  scanCardLeft: {
+    flex: 1,
+  },
+  scanCardStore: {
+    fontSize: 14,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  scanCardShipping: {
+    fontSize: 14,
+    color: colors.muted,
+    marginBottom: 4,
+  },
+  scanCardEta: {
+    fontSize: 14,
+    color: colors.muted,
+    marginBottom: 4,
+  },
+  scanCardRating: {
+    fontSize: 14,
+    color: colors.muted,
+    marginBottom: 8,
+  },
+  scanCardDate: {
+    fontSize: 12,
+    color: colors.muted,
+    fontStyle: 'italic',
+  },
+  scanCardRight: {
+    alignItems: 'flex-end',
+  },
+  scanCardPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
   },
 });

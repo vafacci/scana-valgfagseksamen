@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated, Image } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
@@ -47,13 +47,14 @@ export default function CameraScreen({ navigation }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [capturedImageUri, setCapturedImageUri] = useState(null);
   const cameraRef = useRef(null);
   const { addScan } = useScanHistory();
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const successScaleAnim = useRef(new Animated.Value(0)).current;
-  const successRotateAnim = useRef(new Animated.Value(0)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
   const confettiAnimations = useRef([
     new Animated.Value(0),
     new Animated.Value(0),
@@ -70,12 +71,12 @@ export default function CameraScreen({ navigation }) {
       return Animated.sequence([
         Animated.timing(anim, {
           toValue: 1,
-          duration: 300 + (index * 100),
+          duration: 500 + (index * 150),
           useNativeDriver: true,
         }),
         Animated.timing(anim, {
           toValue: 0,
-          duration: 2000,
+          duration: 2500,
           useNativeDriver: true,
         }),
       ]);
@@ -83,6 +84,18 @@ export default function CameraScreen({ navigation }) {
     
     Animated.parallel(animations).start();
   };
+
+  if (!permission) {
+    // Camera permissions are still loading
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.message}>Loading camera permissions...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!permission.granted) {
     // Camera permissions are not granted yet
@@ -152,17 +165,18 @@ export default function CameraScreen({ navigation }) {
       });
       
       console.log('Photo taken, analyzing with AI...', photo.uri);
+      setCapturedImageUri(photo.uri);
       setProcessingStep('Forbereder...');
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      setProcessingStep('Sender til AI...');
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      setProcessingStep('AI analyserer...');
+      setProcessingStep('Sender til AI...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      setProcessingStep('AI analyserer...');
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      
       setProcessingStep('Behandler data...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 600));
       
       setProcessingStep('Fundet!');
       setShowSuccess(true);
@@ -175,12 +189,12 @@ export default function CameraScreen({ navigation }) {
         Animated.sequence([
           Animated.timing(pulseAnim, {
             toValue: 1.3,
-            duration: 600,
+            duration: 800,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
-            duration: 600,
+            duration: 800,
             useNativeDriver: true,
           }),
         ])
@@ -194,11 +208,28 @@ export default function CameraScreen({ navigation }) {
           friction: 8,
           useNativeDriver: true,
         }),
-        Animated.timing(successRotateAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        })
+        Animated.sequence([
+          Animated.timing(shakeAnim, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shakeAnim, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ])
       ]).start();
       
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -242,18 +273,19 @@ export default function CameraScreen({ navigation }) {
 
       if (!result.canceled && result.assets[0]) {
         const imageUri = result.assets[0].uri;
+        setCapturedImageUri(imageUri);
         
         setProcessingStep('Forbereder...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 600));
         
         setProcessingStep('Sender til AI...');
-        await new Promise(resolve => setTimeout(resolve, 700));
+        await new Promise(resolve => setTimeout(resolve, 800));
         
         setProcessingStep('AI analyserer...');
-        await new Promise(resolve => setTimeout(resolve, 900));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         setProcessingStep('Behandler data...');
-        await new Promise(resolve => setTimeout(resolve, 400));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         setProcessingStep('Fundet!');
         setShowSuccess(true);
@@ -266,12 +298,12 @@ export default function CameraScreen({ navigation }) {
           Animated.sequence([
             Animated.timing(pulseAnim, {
               toValue: 1.3,
-              duration: 600,
+              duration: 800,
               useNativeDriver: true,
             }),
             Animated.timing(pulseAnim, {
               toValue: 1,
-              duration: 600,
+              duration: 800,
               useNativeDriver: true,
             }),
           ])
@@ -285,11 +317,28 @@ export default function CameraScreen({ navigation }) {
             friction: 8,
             useNativeDriver: true,
           }),
-          Animated.timing(successRotateAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          })
+          Animated.sequence([
+            Animated.timing(shakeAnim, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnim, {
+              toValue: 0,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnim, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(shakeAnim, {
+              toValue: 0,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ])
         ]).start();
         
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -340,11 +389,129 @@ export default function CameraScreen({ navigation }) {
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
-        <CameraView 
-          style={styles.camera} 
-          facing={facing}
-          ref={cameraRef}
-        >
+        {capturedImageUri && isProcessing ? (
+          <View style={styles.camera}>
+            <Image 
+              source={{ uri: capturedImageUri }}
+              style={styles.camera}
+              resizeMode="cover"
+            />
+            {/* AI Scanning overlay */}
+            <View style={styles.scanOverlay}>
+              {isProcessing && (
+                <View style={styles.processingOverlay}>
+                  {!showSuccess ? (
+                    <>
+                      <ActivityIndicator size="large" color={colors.primary} />
+                      <Text style={styles.processingText}>{processingStep}</Text>
+                      <View style={styles.progressSteps}>
+                        <View style={[styles.step, processingStep.includes('Tager') && styles.stepActive]} />
+                        <View style={[styles.step, processingStep.includes('Forbereder') && styles.stepActive]} />
+                        <View style={[styles.step, processingStep.includes('Sender') && styles.stepActive]} />
+                        <View style={[styles.step, processingStep.includes('AI analyserer') && styles.stepActive]} />
+                        <View style={[styles.step, processingStep.includes('Behandler') && styles.stepActive]} />
+                        <View style={[styles.step, processingStep.includes('Fundet') && styles.stepActive]} />
+                      </View>
+                    </>
+                  ) : (
+                    <Animated.View style={[
+                      styles.successContainer,
+                      {
+                        transform: [
+                          { scale: successScaleAnim }
+                        ]
+                      }
+                    ]}>
+                      <Animated.Text style={[
+                        styles.successIcon,
+                        {
+                          transform: [
+                            { scale: pulseAnim },
+                            {
+                              translateX: shakeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 10],
+                              })
+                            }
+                          ]
+                        }
+                      ]}>✨</Animated.Text>
+                      <Animated.Text style={[
+                        styles.successText,
+                        {
+                          transform: [
+                            {
+                              translateX: shakeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 8],
+                              })
+                            }
+                          ]
+                        }
+                      ]}>Produkt fundet!</Animated.Text>
+                      <Animated.Text style={[
+                        styles.successSubtext,
+                        {
+                          transform: [
+                            {
+                              translateX: shakeAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 6],
+                              })
+                            }
+                          ]
+                        }
+                      ]}>Navigerer til resultater...</Animated.Text>
+                    </Animated.View>
+                  )}
+                  
+                  {/* Confetti Elements */}
+                  {showSuccess && confettiAnimations.map((anim, index) => (
+                    <Animated.View
+                      key={index}
+                      style={[
+                        styles.confetti,
+                        {
+                          left: `${10 + (index * 12)}%`,
+                          transform: [
+                            {
+                              translateY: anim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, -300],
+                              }),
+                            },
+                            {
+                              rotate: anim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: ['0deg', '720deg'],
+                              }),
+                            },
+                            {
+                              scale: anim.interpolate({
+                                inputRange: [0, 0.5, 1],
+                                outputRange: [0, 1.2, 0.8],
+                              }),
+                            },
+                          ],
+                          opacity: anim,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.confettiEmoji}>
+                        {['🎉', '✨', '🎊', '💫', '⭐', '🌟', '💎', '🔥'][index]}
+                      </Text>
+                    </Animated.View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        ) : (
+          <CameraView 
+            style={styles.camera} 
+            facing={facing}
+            ref={cameraRef}
+          >
           {/* AI Scanning overlay */}
           <View style={styles.scanOverlay}>
             <View style={styles.scanFrame}>
@@ -376,24 +543,50 @@ export default function CameraScreen({ navigation }) {
                     styles.successContainer,
                     {
                       transform: [
-                        { scale: successScaleAnim },
-                        { 
-                          rotateZ: successRotateAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['0deg', '360deg'],
-                          })
-                        }
+                        { scale: successScaleAnim }
                       ]
                     }
                   ]}>
                     <Animated.Text style={[
                       styles.successIcon,
                       {
-                        transform: [{ scale: pulseAnim }]
+                        transform: [
+                          { scale: pulseAnim },
+                          {
+                            translateX: shakeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 10],
+                            })
+                          }
+                        ]
                       }
                     ]}>✨</Animated.Text>
-                    <Text style={styles.successText}>Produkt fundet!</Text>
-                    <Text style={styles.successSubtext}>Navigerer til resultater...</Text>
+                    <Animated.Text style={[
+                      styles.successText,
+                      {
+                        transform: [
+                          {
+                            translateX: shakeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 8],
+                            })
+                          }
+                        ]
+                      }
+                    ]}>Produkt fundet!</Animated.Text>
+                    <Animated.Text style={[
+                      styles.successSubtext,
+                      {
+                        transform: [
+                          {
+                            translateX: shakeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0, 6],
+                            })
+                          }
+                        ]
+                      }
+                    ]}>Navigerer til resultater...</Animated.Text>
                   </Animated.View>
                 )}
                 
@@ -438,6 +631,7 @@ export default function CameraScreen({ navigation }) {
             )}
           </View>
         </CameraView>
+        )}
       </View>
 
       {/* Camera Controls */}
@@ -486,6 +680,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     marginRight: 16,
   },
+  frozenBackButton: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    zIndex: 1000,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   topLabel: {
     color: colors.muted,
     fontSize: 14,
@@ -516,12 +720,11 @@ const styles = StyleSheet.create({
   },
   cameraContainer: {
     flex: 1,
-    margin: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
   },
   camera: {
     flex: 1,
+    width: '100%',
+    height: '100%',
   },
   scanOverlay: {
     flex: 1,
@@ -529,15 +732,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scanFrame: {
-    width: 250,
-    height: 250,
+    width: 300,
+    height: 300,
     position: 'relative',
   },
   scanInstruction: {
     color: colors.text,
     fontSize: 16,
     textAlign: 'center',
-    marginTop: 30,
+    marginTop: 100,
     paddingHorizontal: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingVertical: 10,
@@ -618,10 +821,10 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: 'absolute',
-    width: 20,
-    height: 20,
+    width: 25,
+    height: 25,
     borderColor: colors.text,
-    borderWidth: 3,
+    borderWidth: 4,
   },
   topLeft: {
     top: 0,
