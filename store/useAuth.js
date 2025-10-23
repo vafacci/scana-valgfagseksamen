@@ -33,6 +33,7 @@ export function useAuth() {
   };
 
   const login = async (userData) => {
+    console.log('useAuth.login called with:', userData);
     const authData = {
       user: userData,
       timestamp: new Date().toISOString(),
@@ -40,6 +41,7 @@ export function useAuth() {
     await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(authData));
     setIsLoggedIn(true);
     setUser(userData);
+    console.log('useAuth.login completed, isLoggedIn set to true');
   };
 
   const logout = async () => {

@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../store/useAuth';
 import AuthNavigator from './AuthNavigator';
@@ -17,40 +18,159 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
-  const navigation = useNavigation();
+  const screenWidth = Dimensions.get('window').width;
 
-  const ScanButton = () => (
-    <TouchableOpacity
-      style={styles.scanButton}
-      onPress={() => navigation.navigate('Camera')}
-    >
-      <View style={styles.whiteSquare}>
-        <Text style={styles.scanIcon}>📷</Text>
-      </View>
-      <Text style={styles.scanLabel}>Scan</Text>
-    </TouchableOpacity>
-  );
+  const WaveNavigationBar = ({ state, descriptors, navigation }) => {
+    console.log('WaveNavigationBar props:', { state, descriptors, navigation });
+    
+    // Animation values
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const waveAnim = useRef(new Animated.Value(0)).current;
+    const buttonAnimations = useRef({
+      home: new Animated.Value(1),
+      favorites: new Animated.Value(1),
+      scan: new Animated.Value(1),
+      profile: new Animated.Value(1),
+      settings: new Animated.Value(1),
+    }).current;
+
+    // Removed problematic wave animation
+
+    const animateButtonPress = (buttonKey) => {
+      Animated.sequence([
+        Animated.timing(buttonAnimations[buttonKey], {
+          toValue: 0.8,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(buttonAnimations[buttonKey], {
+          toValue: 1,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    };
+
+    const handleNavigation = (screenName, buttonKey) => {
+      animateButtonPress(buttonKey);
+      
+      // Add haptic feedback simulation with scale animation
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      if (screenName === 'Camera') {
+        navigation.navigate(screenName);
+      } else {
+        navigation.jumpTo(screenName);
+      }
+    };
+    
+    return (
+      <Animated.View style={[styles.waveContainer, { transform: [{ scale: scaleAnim }] }]}>
+        <Svg height="100" width={screenWidth} style={styles.waveSvg}>
+          <Path
+            d={`M0,5 L${screenWidth/2 - 80},5 Q${screenWidth/2 - 60},5 ${screenWidth/2 - 50},25 Q${screenWidth/2 - 30},75 ${screenWidth/2},75 Q${screenWidth/2 + 30},75 ${screenWidth/2 + 50},25 Q${screenWidth/2 + 60},5 ${screenWidth/2 +80},5 L${screenWidth},5 L${screenWidth},100 L0,100 Z`}
+            fill="white"
+          />
+        </Svg>
+        
+        {/* Navigation Items */}
+        <View style={styles.navItemsContainer}>
+          {/* Left Side Items */}
+          <View style={styles.leftNavItems}>
+            <TouchableOpacity 
+              style={styles.navItem} 
+              onPress={() => handleNavigation('HomeTab', 'home')}
+            >
+              <Animated.View style={{ transform: [{ scale: buttonAnimations.home }] }}>
+                <Text style={styles.tabIcon}>🏠</Text>
+                <Text style={styles.tabLabel}>Hjem</Text>
+              </Animated.View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.navItem} 
+              onPress={() => handleNavigation('FavoritesTab', 'favorites')}
+            >
+              <Animated.View style={{ transform: [{ scale: buttonAnimations.favorites }] }}>
+                <Text style={styles.tabIcon}>❤️</Text>
+                <Text style={styles.tabLabel}>Favoritter</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Scan Button */}
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() => handleNavigation('Camera', 'scan')}
+          >
+            <Animated.View style={{ transform: [{ scale: buttonAnimations.scan }] }}>
+              <View style={styles.scannerIcon}>
+                <View style={styles.scannerInner}>
+                  <View style={styles.scannerCorners}>
+                    <View style={[styles.corner, styles.topLeft]} />
+                    <View style={[styles.corner, styles.topRight]} />
+                    <View style={[styles.corner, styles.bottomLeft]} />
+                    <View style={[styles.corner, styles.bottomRight]} />
+                  </View>
+                </View>
+              </View>
+              <Text style={styles.scanLabel}>Scan</Text>
+            </Animated.View>
+          </TouchableOpacity>
+
+          {/* Right Side Items */}
+          <View style={styles.rightNavItems}>
+            <TouchableOpacity 
+              style={styles.navItem} 
+              onPress={() => handleNavigation('ProfileTab', 'profile')}
+            >
+              <Animated.View style={{ transform: [{ scale: buttonAnimations.profile }] }}>
+                <Text style={styles.tabIcon}>👤</Text>
+                <Text style={styles.tabLabel}>Profil</Text>
+              </Animated.View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.navItem} 
+              onPress={() => handleNavigation('SettingsTab', 'settings')}
+            >
+              <Animated.View style={{ transform: [{ scale: buttonAnimations.settings }] }}>
+                <Text style={styles.tabIcon}>⚙</Text>
+                <Text style={styles.tabLabel}>Indstillinger</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+    );
+  };
 
   return (
     <Tab.Navigator
       initialRouteName="HomeTab"
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.card,
-          borderTopWidth: 1,
-          height: 80,
-          paddingBottom: 20,
-          paddingTop: 10,
+        tabBarStyle: { 
+          display: 'none',
+          height: 0,
+          opacity: 0,
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-        },
+        tabBarButton: () => null,
       }}
+      tabBar={(props) => <WaveNavigationBar {...props} />}
     >
       <Tab.Screen
         name="HomeTab"
@@ -111,56 +231,200 @@ function TabNavigator() {
 
 export default function RootNavigator() {
   const { isLoggedIn, loading } = useAuth();
+  
+  console.log('RootNavigator render - isLoggedIn:', isLoggedIn, 'loading:', loading);
 
   if (loading) {
+    console.log('RootNavigator: Still loading...');
     return null;
   }
 
   if (!isLoggedIn) {
+    console.log('RootNavigator: User not logged in, showing AuthNavigator');
     return <AuthNavigator />;
   }
 
+  console.log('RootNavigator: User logged in, showing TabNavigator');
   return (
     <Stack.Navigator
       initialRouteName="Tabs"
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0F1B2B' }
+        contentStyle: { backgroundColor: '#0F1B2B' },
+        animation: 'slide_from_right',
+        animationDuration: 300,
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
       }}
     >
-      <Stack.Screen name="Tabs" component={TabNavigator} />
-      <Stack.Screen name="Camera" component={CameraScreen} />
-      <Stack.Screen name="Results" component={ResultsScreen} />
+      <Stack.Screen 
+        name="Tabs" 
+        component={TabNavigator}
+        options={{
+          animation: 'fade',
+          animationDuration: 400,
+        }}
+      />
+      <Stack.Screen 
+        name="Camera" 
+        component={CameraScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          animationDuration: 350,
+          gestureEnabled: true,
+          gestureDirection: 'vertical',
+        }}
+      />
+      <Stack.Screen 
+        name="Results" 
+        component={ResultsScreen}
+        options={{
+          animation: 'slide_from_right',
+          animationDuration: 300,
+          gestureEnabled: true,
+        }}
+      />
     </Stack.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
+  waveContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    marginTop: 40,
+    elevation: 25,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -8,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+  },
+  waveSvg: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  navItemsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+  },
+  leftNavItems: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 30,
+    flex: 1,
+    justifyContent: 'flex-start',
+  },
+  rightNavItems: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 30,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   scanButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    marginBottom: 20,
+
+
   },
-  whiteSquare: {
-    width: 40,
-    height: 40,
-    backgroundColor: 'white',
+  scannerIcon: {
+    width: 65,
+    height: 65,
+    backgroundColor: colors.primary,
+    borderRadius: 32.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 0,
+    elevation: 15,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  scannerInner: {
+    width: 32,
+    height: 32,
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
   },
-  scanIcon: {
-    fontSize: 20,
-    color: colors.primary,
+  scannerCorners: {
+    width: 32,
+    height: 32,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderColor: 'white',
+    borderWidth: 2,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
   },
   scanLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    color: colors.muted,
-    marginTop: 2,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 4,
+    textAlign: 'center',
+    width: 65,
   },
   tabIcon: {
     fontSize: 20,
+    marginBottom: 4,
+  },
+  tabLabel: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: '#999999',
   },
 });

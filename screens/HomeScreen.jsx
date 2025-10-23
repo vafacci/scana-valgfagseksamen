@@ -27,7 +27,10 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.subtitle}>
           Med kamera-scanneren kan du hurtigt finde prisen på en vare - uden at skulle søge manuelt.
         </Text>
-        
+      </View>
+
+      {/* Scan Button - Centered */}
+      <View style={styles.scanButtonContainer}>
         <TouchableOpacity 
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Camera')}
@@ -76,7 +79,7 @@ const styles = StyleSheet.create({
   mainCard: {
     backgroundColor: colors.card,
     marginHorizontal: 20,
-    marginVertical: 20,
+    marginTop: 75,
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
@@ -88,7 +91,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
 
   scannerInner: {
@@ -145,35 +148,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.muted,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     lineHeight: 20,
+  },
+  scanButtonContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingHorizontal: 141,
+    paddingVertical: 20,
     borderRadius: 12,
-    minWidth: 160,
+    minWidth: 200,
     alignItems: 'center',
+    marginBottom: 200,
+
   },
   buttonText: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 40,
-    marginVertical: 20,
+    paddingVertical: 20,
+    position: 'absolute',
+    bottom: 150,
+    left: 0,
+    right: 0,
   },
   actionItem: {
     alignItems: 'center',
   },
   actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
     borderColor: colors.text,
     justifyContent: 'center',
@@ -186,6 +201,7 @@ const styles = StyleSheet.create({
   },
   actionLabel: {
     color: colors.text,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

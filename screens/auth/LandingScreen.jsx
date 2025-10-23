@@ -8,6 +8,7 @@ export default function LandingScreen({ navigation }) {
   const { login } = useAuth();
 
   const handleJoinNow = async () => {
+    console.log('Join now button pressed');
     // Instantly authenticate with a dummy user and let RootNavigator switch to tabs
     const dummyUser = {
       id: 'dev-user',
@@ -16,9 +17,11 @@ export default function LandingScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     };
     try {
+      console.log('Attempting to login with dummy user:', dummyUser);
       await login(dummyUser);
+      console.log('Login successful, should navigate to HomeScreen');
     } catch (e) {
-      // no-op
+      console.error('Login failed:', e);
     }
   };
 

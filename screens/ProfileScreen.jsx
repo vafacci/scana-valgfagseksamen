@@ -84,12 +84,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  
   topLabel: {
     color: colors.muted,
     fontSize: 14,
   },
   scrollView: {
     flex: 1,
+    paddingTop: 30,
   },
   header: {
     flexDirection: 'row',
@@ -97,6 +99,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 20,
+    
   },
   gearButton: {
     padding: 8,
@@ -105,7 +108,8 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    marginBottom: 24,
+    marginBottom: 30,
+    marginTop: 20,
   },
   section: {
     paddingHorizontal: 20,
@@ -114,7 +118,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 20,
   },
   loadingText: {
     fontSize: 14,

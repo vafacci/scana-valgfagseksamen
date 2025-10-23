@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingTop: 30,
   },
   linksContainer: {
     paddingHorizontal: 20,
