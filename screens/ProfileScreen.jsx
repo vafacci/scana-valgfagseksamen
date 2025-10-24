@@ -7,21 +7,77 @@ import StatTile from '../components/StatTile';
 import ListItem from '../components/ListItem';
 import SettingsScreen from './SettingsScreen';
 import { useScanHistory } from '../store/useScanHistory';
+import { useFavorites } from '../store/useFavorites';
+import { useUserProfile } from '../store/useUserProfile';
+import { useLanguage } from '../store/LanguageContext';
 
 export default function ProfileScreen({ navigation }) {
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const { scanHistory, loading, loadScanHistory } = useScanHistory();
-  console.log('ProfileScreen rendered!'); // Debug log
+  const [shouldAnimate, setShouldAnimate] = useState(false);
+  const [removingScanId, setRemovingScanId] = useState(null);
+  const { scanHistory, loading, loadScanHistory, removeScan } = useScanHistory();
+  const { favorites, loadFavorites } = useFavorites();
+  const { userProfile, loadUserProfile, updateFavoritesCount } = useUserProfile();
+  const { t, language } = useLanguage();
+  
+  console.log('ProfileScreen rendered!', {
+    scanHistoryLength: scanHistory.length,
+    favoritesLength: favorites.length,
+    userElo: userProfile.elo,
+    shouldAnimate,
+    currentLanguage: language
+  }); // Debug log
 
-  // Refresh scan history when screen comes into focus
+  // Refresh data when screen comes into focus
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      console.log('ProfileScreen focused, loading scan history...');
-      loadScanHistory();
+    const unsubscribe = navigation.addListener('focus', async () => {
+      console.log('ProfileScreen focused, loading data...');
+      setShouldAnimate(false); // Reset animation state first
+      
+      // Load all data
+      await Promise.all([
+        loadScanHistory(),
+        loadFavorites(),
+        loadUserProfile()
+      ]);
+      
+      // Trigger animation after data is loaded
+      setTimeout(() => {
+        setShouldAnimate(true);
+      }, 200);
     });
 
     return unsubscribe;
-  }, [navigation, loadScanHistory]);
+  }, [navigation, loadScanHistory, loadFavorites, loadUserProfile]);
+
+  // Reset animation state when screen loses focus
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      setShouldAnimate(false);
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  // Update favorites count when favorites change
+  useEffect(() => {
+    if (favorites.length !== userProfile.totalFavorites) {
+      updateFavoritesCount(favorites.length);
+    }
+  }, [favorites.length, userProfile.totalFavorites, updateFavoritesCount]);
+
+  // Handle removing a scan
+  const handleRemoveScan = async (scanId) => {
+    try {
+      setRemovingScanId(scanId);
+      await removeScan(scanId);
+      console.log('Scan removed:', scanId);
+    } catch (error) {
+      console.error('Error removing scan:', error);
+    } finally {
+      setRemovingScanId(null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -30,8 +86,8 @@ export default function ProfileScreen({ navigation }) {
         {/* Header with Avatar and Gear */}
         <View style={styles.header}>
           <Avatar 
-            name="Mads Mikkelsen" 
-            subtitle="Member since Jan 2025"
+            name={userProfile.name} 
+            subtitle={`${t('memberSince')} ${userProfile.memberSince}`}
             size={60}
             imageUrl="https://image.euroman.dk/5630446.webp?imageId=5630446&x=0.00&y=2.20&cropw=100.00&croph=95.59&width=1200&height=684&format=jpg"
           />
@@ -45,23 +101,50 @@ export default function ProfileScreen({ navigation }) {
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <StatTile icon="📱" value="14" label="Scans" />
-          <StatTile icon="❤️" value="4" label="Favorits" />
-          <StatTile icon="🏆" value="230" label="Elo" />
+          <StatTile 
+            key={`scans-${scanHistory.length}-${shouldAnimate}`}
+            icon="📱" 
+            value={scanHistory.length.toString()} 
+            label={t('scans')} 
+            animated={shouldAnimate}
+          />
+          <StatTile 
+            key={`favorites-${favorites.length}-${shouldAnimate}`}
+            icon="❤️" 
+            value={favorites.length.toString()} 
+            label={t('favorites')} 
+            animated={shouldAnimate}
+          />
+          <StatTile 
+            key={`elo-${userProfile.elo}-${shouldAnimate}`}
+            icon="🏆" 
+            value={userProfile.elo.toString()} 
+            label={t('elo')} 
+            animated={shouldAnimate}
+          />
         </View>
 
         {/* Recent Scans Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Scans</Text>
+          <Text style={styles.sectionTitle}>{t('recentScans')}</Text>
           {loading ? (
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={styles.loadingText}>{t('loading')}</Text>
           ) : scanHistory.length > 0 ? (
             scanHistory.map((scan) => (
               <View key={scan.id} style={styles.scanCard}>
                 <View style={styles.scanCardHeader}>
                   <Text style={styles.scanCardTitle}>{scan.productName}</Text>
-                  <TouchableOpacity style={styles.removeButton}>
-                    <Text style={styles.removeIcon}>✕</Text>
+                  <TouchableOpacity 
+                    style={[
+                      styles.removeButton,
+                      removingScanId === scan.id && styles.removeButtonDisabled
+                    ]}
+                    onPress={() => handleRemoveScan(scan.id)}
+                    disabled={removingScanId === scan.id}
+                  >
+                    <Text style={styles.removeIcon}>
+                      {removingScanId === scan.id ? '⏳' : '✕'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 
@@ -81,7 +164,7 @@ export default function ProfileScreen({ navigation }) {
               </View>
             ))
           ) : (
-            <Text style={styles.emptyText}>No scans yet. Start scanning to see your history here!</Text>
+            <Text style={styles.emptyText}>{t('noScansYet')}</Text>
           )}
         </View>
       </ScrollView>
@@ -177,6 +260,9 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     padding: 4,
+  },
+  removeButtonDisabled: {
+    opacity: 0.5,
   },
   removeIcon: {
     fontSize: 18,

@@ -4,12 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../store/useAuth';
 import { useUsers } from '../../store/useUsers';
+import { useLanguage } from '../../store/LanguageContext';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login } = useAuth();
   const { findUser } = useUsers();
+  const { t } = useLanguage();
 
   const handleLogin = async () => {
     // Always log in with a dummy user, regardless of input
@@ -61,12 +63,12 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Login Her</Text>
-          <Text style={styles.subtitle}>Velkommen tilbage til Scana!</Text>
+          <Text style={styles.title}>{t('loginHere')}</Text>
+          <Text style={styles.subtitle}>{t('welcomeBack')}</Text>
 
           {/* Social Login Section */}
           <View style={styles.socialSection}>
-            <Text style={styles.socialLabel}>Hurtig login med</Text>
+            <Text style={styles.socialLabel}>{t('quickLogin')}</Text>
             <View style={styles.socialButtons}>
               <TouchableOpacity 
                 style={styles.socialButton}
@@ -95,7 +97,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.formSection}>
             <TextInput
               style={styles.input}
-              placeholder="Email"
+              placeholder={t('email')}
               placeholderTextColor={colors.muted}
               value={email}
               onChangeText={setEmail}
@@ -105,7 +107,7 @@ export default function LoginScreen({ navigation }) {
             
             <TextInput
               style={styles.input}
-              placeholder="Kodeord"
+              placeholder={t('password')}
               placeholderTextColor={colors.muted}
               value={password}
               onChangeText={setPassword}
@@ -116,7 +118,7 @@ export default function LoginScreen({ navigation }) {
           {/* Forgot Password Link */}
           <View style={styles.forgotSection}>
             <TouchableOpacity onPress={handleForgotPassword}>
-              <Text style={styles.forgotLink}>Forgot password?</Text>
+              <Text style={styles.forgotLink}>{t('forgotPassword')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -125,12 +127,12 @@ export default function LoginScreen({ navigation }) {
             style={styles.loginButton}
             onPress={handleLogin}
           >
-            <Text style={styles.loginButtonText}>Login</Text>
+            <Text style={styles.loginButtonText}>{t('login')}</Text>
           </TouchableOpacity>
 
           {/* Signup Link */}
           <TouchableOpacity onPress={handleSignup}>
-            <Text style={styles.signupLink}>Ny på Scana? Opret dig her!</Text>
+            <Text style={styles.signupLink}>{t('dontHaveAccount')} {t('createAccount')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

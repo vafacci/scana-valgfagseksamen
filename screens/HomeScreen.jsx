@@ -1,8 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/colors';
+import { useLanguage } from '../store/LanguageContext';
 
 export default function HomeScreen({ navigation }) {
+  const { t, language } = useLanguage();
+  
+  console.log('HomeScreen rendered!', {
+    currentLanguage: language,
+    readyToScanText: t('readyToScan')
+  }); // Debug log
+  
   return (
     <SafeAreaView style={styles.container}>
       {/* Top Section */}
@@ -23,9 +31,9 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        <Text style={styles.title}>Er du klar til at scanne?</Text>
+        <Text style={styles.title}>{t('readyToScan')}</Text>
         <Text style={styles.subtitle}>
-          Med kamera-scanneren kan du hurtigt finde prisen på en vare - uden at skulle søge manuelt.
+          {t('scanDescription')}
         </Text>
       </View>
 
@@ -35,7 +43,7 @@ export default function HomeScreen({ navigation }) {
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Camera')}
         >
-          <Text style={styles.buttonText}>Scan nu</Text>
+          <Text style={styles.buttonText}>{t('scanNow')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -159,18 +167,19 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 141,
+    paddingHorizontal: 40,
     paddingVertical: 20,
     borderRadius: 12,
     minWidth: 200,
     alignItems: 'center',
     marginBottom: 200,
-
   },
   buttonText: {
     color: colors.text,
     fontSize: 18,
     fontWeight: '600',
+    textAlign: 'center',
+    flexWrap: 'nowrap',
   },
   actionButtons: {
     flexDirection: 'row',

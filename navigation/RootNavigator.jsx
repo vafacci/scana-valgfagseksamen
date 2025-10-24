@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../theme/colors';
 import { useAuth } from '../store/useAuth';
+import { useLanguage } from '../store/LanguageContext';
 import AuthNavigator from './AuthNavigator';
 import HomeScreen from '../screens/HomeScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
@@ -20,6 +21,7 @@ const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
   const screenWidth = Dimensions.get('window').width;
+  const { t } = useLanguage();
 
   const WaveNavigationBar = ({ state, descriptors, navigation }) => {
     console.log('WaveNavigationBar props:', { state, descriptors, navigation });
@@ -137,7 +139,7 @@ function TabNavigator() {
                   ] 
                 }}>
                   <Text style={styles.tabIcon}>🏠</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 12 }]}>Hjem</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 12 }]}>{t('home')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -154,7 +156,7 @@ function TabNavigator() {
                   ] 
                 }}>
                   <Text style={styles.tabIcon}>❤️</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 4 }]}>Favoritter</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 4 }]}>{t('favorites')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -200,7 +202,7 @@ function TabNavigator() {
                   </View>
                 </View>
               </View>
-              <Text style={styles.scanLabel}>Scan</Text>
+              <Text style={styles.scanLabel}>{t('camera')}</Text>
               </Animated.View>
             </View>
           </TouchableOpacity>
@@ -219,7 +221,7 @@ function TabNavigator() {
                   ] 
                 }}>
                   <Text style={styles.tabIcon}>👤</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 10 }]}>Profil</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 10 }]}>{t('profile')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -236,7 +238,7 @@ function TabNavigator() {
                   ] 
                 }}>
                   <Text style={styles.tabIcon}>⚙</Text>
-                  <Text style={styles.tabLabel}>Indstillinger</Text>
+                  <Text style={styles.tabLabel}>{t('settings')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>

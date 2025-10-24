@@ -4,6 +4,8 @@ import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
 import { useScanHistory } from '../store/useScanHistory';
+import { useUserProfile } from '../store/useUserProfile';
+import { useLanguage } from '../store/LanguageContext';
 
 // Mock AI Product Recognition Database
 const AI_PRODUCT_DATABASE = {
@@ -50,6 +52,8 @@ export default function CameraScreen({ navigation }) {
   const [capturedImageUri, setCapturedImageUri] = useState(null);
   const cameraRef = useRef(null);
   const { addScan } = useScanHistory();
+  const { updateElo } = useUserProfile();
+  const { t } = useLanguage();
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -113,11 +117,11 @@ export default function CameraScreen({ navigation }) {
 
   // Real AI Image Recognition Function using Uncle's API
   const analyzeImageWithAI = async (imageUri) => {
-    setProcessingStep('Forbereder billede...');
+    setProcessingStep(t('processing'));
     await new Promise(resolve => setTimeout(resolve, 500));
     
     console.log('Sending image to AI API...', imageUri);
-    setProcessingStep('Sender til AI API...');
+    setProcessingStep(t('analyzing'));
     
     // Create FormData for image upload
     const formData = new FormData();
@@ -127,7 +131,7 @@ export default function CameraScreen({ navigation }) {
       name: 'product_image.jpg',
     });
     
-    setProcessingStep('AI analyserer produktet...');
+    setProcessingStep(t('identifying'));
     
     // Call your uncle's AI recognition API
     const response = await fetch('https://your-uncles-api.com/recognize', {
@@ -140,13 +144,13 @@ export default function CameraScreen({ navigation }) {
       },
     });
     
-    setProcessingStep('Behandler resultat...');
+    setProcessingStep(t('searching'));
     await new Promise(resolve => setTimeout(resolve, 300));
     
     const result = await response.json();
     console.log('AI API Response:', result);
     
-    setProcessingStep('Færdig!');
+    setProcessingStep(t('success'));
     await new Promise(resolve => setTimeout(resolve, 200));
     
     return result;
@@ -156,7 +160,7 @@ export default function CameraScreen({ navigation }) {
     if (isProcessing) return;
     
     setIsProcessing(true);
-    setProcessingStep('Tager billede...');
+    setProcessingStep(t('processing'));
     
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync({
@@ -166,23 +170,23 @@ export default function CameraScreen({ navigation }) {
       
       console.log('Photo taken, analyzing with AI...', photo.uri);
       setCapturedImageUri(photo.uri);
-      setProcessingStep('Forbereder...');
+      setProcessingStep(t('processing'));
       await new Promise(resolve => setTimeout(resolve, 800));
       
-      setProcessingStep('Sender til AI...');
+      setProcessingStep(t('analyzing'));
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setProcessingStep('AI analyserer...');
+      setProcessingStep(t('identifying'));
       await new Promise(resolve => setTimeout(resolve, 1200));
       
-      setProcessingStep('Behandler data...');
+      setProcessingStep(t('searching'));
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      setProcessingStep('Fundet!');
-      setShowSuccess(true);
+      setProcessingStep(t('success'));
+      setShowSuccess(true); // Re-enabled to continue flow
       
-      // Trigger confetti immediately
-      triggerConfetti();
+      // Trigger confetti immediately - COMMENTED OUT FOR TESTING
+      // triggerConfetti();
       
       // Start pulse animation for success icon
       Animated.loop(
@@ -246,9 +250,9 @@ export default function CameraScreen({ navigation }) {
         image: demoProduct.image,
         confidence: 0.95,
         photoUri: photo.uri
-      });
+      }, updateElo);
       
-      // Navigate to results
+      // Navigate to results - Re-enabled for testing
       navigation.replace('Results', { 
         product: demoProduct,
         analysis: { confidence: 0.95 },
@@ -288,10 +292,10 @@ export default function CameraScreen({ navigation }) {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         setProcessingStep('Fundet!');
-        setShowSuccess(true);
+        setShowSuccess(true); // Re-enabled to continue flow
         
-        // Trigger confetti immediately
-        triggerConfetti();
+        // Trigger confetti immediately - COMMENTED OUT FOR TESTING
+        // triggerConfetti();
         
         // Start pulse animation for success icon
         Animated.loop(
@@ -355,9 +359,9 @@ export default function CameraScreen({ navigation }) {
           image: demoProduct.image,
           confidence: 0.92,
           photoUri: imageUri
-        });
+        }, updateElo);
         
-        // Navigate to results
+        // Navigate to results - Re-enabled for testing
         navigation.replace('Results', { 
           product: demoProduct,
           analysis: { confidence: 0.92 },
@@ -380,12 +384,14 @@ export default function CameraScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Section */}
-      <View style={styles.topSection}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Top Section - only show when not processing */}
+      {!isProcessing && (
+        <View style={styles.topSection}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backArrow}>←</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Camera View */}
       <View style={styles.cameraContainer}>
@@ -396,6 +402,13 @@ export default function CameraScreen({ navigation }) {
               style={styles.camera}
               resizeMode="cover"
             />
+            {/* Back button overlay */}
+            <TouchableOpacity 
+              style={styles.frozenBackButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.backArrow}>←</Text>
+            </TouchableOpacity>
             {/* AI Scanning overlay */}
             <View style={styles.scanOverlay}>
               {isProcessing && (
@@ -414,59 +427,14 @@ export default function CameraScreen({ navigation }) {
                       </View>
                     </>
                   ) : (
-                    <Animated.View style={[
-                      styles.successContainer,
-                      {
-                        transform: [
-                          { scale: successScaleAnim }
-                        ]
-                      }
-                    ]}>
-                      <Animated.Text style={[
-                        styles.successIcon,
-                        {
-                          transform: [
-                            { scale: pulseAnim },
-                            {
-                              translateX: shakeAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 10],
-                              })
-                            }
-                          ]
-                        }
-                      ]}>✨</Animated.Text>
-                      <Animated.Text style={[
-                        styles.successText,
-                        {
-                          transform: [
-                            {
-                              translateX: shakeAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 8],
-                              })
-                            }
-                          ]
-                        }
-                      ]}>Produkt fundet!</Animated.Text>
-                      <Animated.Text style={[
-                        styles.successSubtext,
-                        {
-                          transform: [
-                            {
-                              translateX: shakeAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 6],
-                              })
-                            }
-                          ]
-                        }
-                      ]}>Navigerer til resultater...</Animated.Text>
-                    </Animated.View>
+                    <View>
+                      {/* Success state commented out for testing */}
+                      {/* Success container and text removed */}
+                    </View>
                   )}
                   
-                  {/* Confetti Elements */}
-                  {showSuccess && confettiAnimations.map((anim, index) => (
+                  {/* Confetti Elements - COMMENTED OUT FOR TESTING */}
+                  {/* {showSuccess && confettiAnimations.map((anim, index) => (
                     <Animated.View
                       key={index}
                       style={[
@@ -501,7 +469,7 @@ export default function CameraScreen({ navigation }) {
                         {['🎉', '✨', '🎊', '💫', '⭐', '🌟', '💎', '🔥'][index]}
                       </Text>
                     </Animated.View>
-                  ))}
+                  ))} */}
                 </View>
               )}
             </View>
@@ -634,32 +602,34 @@ export default function CameraScreen({ navigation }) {
         )}
       </View>
 
-      {/* Camera Controls */}
-      <View style={styles.controls}>
-        <TouchableOpacity 
-          style={styles.controlButton}
-          onPress={pickImageFromAlbum}
-          disabled={isProcessing}
-        >
-          <Text style={styles.controlIcon}>📷</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.shutterButton, isProcessing && styles.shutterButtonDisabled]} 
-          onPress={takePictureAndAnalyze}
-          disabled={isProcessing}
-        >
-          <View style={styles.shutterInner} />
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.controlButton} 
-          onPress={toggleCameraFacing}
-          disabled={isProcessing}
-        >
-          <Text style={styles.controlIcon}>🔄</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Camera Controls - only show when not processing */}
+      {!isProcessing && (
+        <View style={styles.controls}>
+          <TouchableOpacity 
+            style={styles.controlButton}
+            onPress={pickImageFromAlbum}
+            disabled={isProcessing}
+          >
+            <Text style={styles.controlIcon}>📷</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.shutterButton, isProcessing && styles.shutterButtonDisabled]} 
+            onPress={takePictureAndAnalyze}
+            disabled={isProcessing}
+          >
+            <View style={styles.shutterInner} />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.controlButton} 
+            onPress={toggleCameraFacing}
+            disabled={isProcessing}
+          >
+            <Text style={styles.controlIcon}>🔄</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -752,16 +722,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   processingText: {
     color: colors.text,
-    fontSize: 16,
-    marginTop: 16,
+    fontSize: 20,
+    marginTop: 20,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   processingSubtext: {
     color: colors.muted,
@@ -771,17 +744,22 @@ const styles = StyleSheet.create({
   },
   progressSteps: {
     flexDirection: 'row',
-    marginTop: 20,
+    marginTop: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
   step: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.muted,
-    marginHorizontal: 4,
-    opacity: 0.3,
+    marginHorizontal: 6,
+    opacity: 0.4,
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 2,
   },
   stepActive: {
     backgroundColor: colors.primary,
@@ -791,6 +769,9 @@ const styles = StyleSheet.create({
   successContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 32,
+    paddingVertical: 24,
   },
   successIcon: {
     fontSize: 60,
@@ -798,15 +779,21 @@ const styles = StyleSheet.create({
   },
   successText: {
     color: colors.text,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
   },
   successSubtext: {
-    color: colors.muted,
-    fontSize: 16,
+    color: colors.text,
+    fontSize: 18,
     textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   confetti: {
     position: 'absolute',

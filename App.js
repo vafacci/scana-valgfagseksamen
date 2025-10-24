@@ -1,11 +1,14 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import RootNavigator from './navigation/RootNavigator';
+import { LanguageProvider } from './store/LanguageContext';
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <RootNavigator />
-    </NavigationContainer>
+    <LanguageProvider>
+      <NavigationContainer>
+        <RootNavigator />
+      </NavigationContainer>
+    </LanguageProvider>
   );
 }

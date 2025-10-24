@@ -89,5 +89,6 @@ export function useFavorites() {
     toggleFavorite,
     isFavorite,
     clearFavorites,
+    loadFavorites,
   };
 }

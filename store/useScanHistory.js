@@ -34,7 +34,7 @@ export function useScanHistory() {
     }
   };
 
-  const addScan = async (scanData) => {
+  const addScan = async (scanData, onEloUpdate) => {
     const newScan = {
       id: Date.now().toString(),
       productName: scanData.productName || 'Unknown Product',
@@ -46,6 +46,13 @@ export function useScanHistory() {
     
     const newHistory = [newScan, ...scanHistory].slice(0, 20); // Keep only last 20 scans
     await saveScanHistory(newHistory);
+    console.log('Scan added, new history length:', newHistory.length); // Debug log
+    
+    // Update elo if callback is provided
+    if (onEloUpdate) {
+      console.log('Updating elo...'); // Debug log
+      await onEloUpdate(5); // Increase elo by 5
+    }
   };
 
   const clearHistory = async () => {

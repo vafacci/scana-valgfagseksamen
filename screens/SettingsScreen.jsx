@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useAuth } from '../store/useAuth';
+import { useLanguage } from '../store/LanguageContext';
 import GradientButton from '../components/GradientButton';
+import LanguageSettingsScreen from './LanguageSettingsScreen';
 
 export default function SettingsScreen({ navigation, visible, onClose }) {
   // Determine if this is being used as a modal or regular screen
   const isModal = visible !== undefined;
   const { logout } = useAuth();
+  const { t } = useLanguage();
+  const [languageSettingsVisible, setLanguageSettingsVisible] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -27,6 +31,10 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
     // TODO: Implement delete profile functionality
   };
 
+  const handleLanguageSettings = () => {
+    setLanguageSettingsVisible(true);
+  };
+
   const renderModalContent = () => (
     <View style={styles.modalContent}>
       {/* Header with Back Button */}
@@ -36,27 +44,27 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
           onPress={onClose}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-          <Text style={styles.backText}>Tilbage</Text>
+          <Text style={styles.backText}>{t('back')}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Title */}
       <View style={styles.titleContainer}>
-        <Text style={styles.title}>Indstillinger</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
       </View>
 
       {/* Action Buttons */}
       <View style={styles.buttonsContainer}>
         <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
-          <Text style={styles.buttonText}>Log ud</Text>
+          <Text style={styles.buttonText}>{t('logout')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.actionButton} onPress={handleAddUser}>
-          <Text style={styles.buttonText}>Tilføj ny bruger</Text>
+          <Text style={styles.buttonText}>{t('addNewUser')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.actionButton} onPress={handleDeleteProfile}>
-          <Text style={[styles.buttonText, styles.deleteText]}>Slet profil</Text>
+          <Text style={[styles.buttonText, styles.deleteText]}>{t('deleteProfile')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -71,29 +79,29 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
     >
       {/* Large Heading */}
       <View style={styles.header}>
-        <Text style={styles.title}>Indstillinger</Text>
+        <Text style={styles.title}>{t('settings')}</Text>
       </View>
 
       {/* Five Gradient Buttons */}
       <View style={styles.buttonsContainer}>
         <GradientButton 
-          title="Profilindstillinger" 
+          title={t('profileSettings')} 
           onPress={() => console.log('Profile settings pressed')}
         />
         <GradientButton 
-          title="Notifikationer" 
+          title={t('notifications')} 
           onPress={() => console.log('Notifications pressed')}
         />
         <GradientButton 
-          title="Sprog og tema" 
-          onPress={() => console.log('Language and theme pressed')}
+          title={t('languageAndTheme')} 
+          onPress={handleLanguageSettings}
         />
         <GradientButton 
-          title="Privatliv og sikkerhed" 
+          title={t('privacyAndSecurity')} 
           onPress={() => console.log('Privacy and security pressed')}
         />
         <GradientButton 
-          title="Konto" 
+          title={t('account')} 
           onPress={() => console.log('Account pressed')}
         />
       </View>
@@ -101,13 +109,13 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
       {/* Text Links */}
       <View style={styles.linksContainer}>
         <TouchableOpacity onPress={handleAddUser}>
-          <Text style={styles.linkText}>Tilføj en ny bruger</Text>
+          <Text style={styles.linkText}>{t('addNewUserLink')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.linkText}>Log ud</Text>
+          <Text style={styles.linkText}>{t('logoutLink')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleDeleteProfile}>
-          <Text style={[styles.linkText, styles.deleteText]}>Slet profil</Text>
+          <Text style={[styles.linkText, styles.deleteText]}>{t('deleteProfileLink')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -115,7 +123,7 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
       {/* Footer Text */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Sammenlign priser fra flere butikker - direkte efter du scanner varen.
+          {t('footerText')}
         </Text>
       </View>
     </ScrollView>
@@ -141,6 +149,12 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
       <View style={styles.screenWrapper}>
         {renderScreenContent()}
       </View>
+      
+      {/* Language Settings Modal */}
+      <LanguageSettingsScreen 
+        visible={languageSettingsVisible}
+        onClose={() => setLanguageSettingsVisible(false)}
+      />
     </SafeAreaView>
   );
 }

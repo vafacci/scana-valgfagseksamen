@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } fr
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
 import { useAuth } from '../../store/useAuth';
+import { useLanguage } from '../../store/LanguageContext';
 
 export default function LandingScreen({ navigation }) {
   const { login } = useAuth();
+  const { t } = useLanguage();
 
   const handleJoinNow = async () => {
     console.log('Join now button pressed');
@@ -36,7 +38,7 @@ export default function LandingScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Landingpage</Text>
+        <Text style={styles.topLabel}>{t('landingpage')}</Text>
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -55,8 +57,8 @@ export default function LandingScreen({ navigation }) {
           </View>
 
           {/* Title */}
-          <Text style={styles.title}>Scana</Text>
-          <Text style={styles.subtitle}>Scan på farten!</Text>
+          <Text style={styles.title}>{t('scana')}</Text>
+          <Text style={styles.subtitle}>{t('scanOnTheGo')}</Text>
 
           {/* Product Images Grid */}
           <View style={styles.productGrid}>
@@ -68,7 +70,7 @@ export default function LandingScreen({ navigation }) {
 
           {/* Social Login Section */}
           <View style={styles.socialSection}>
-            <Text style={styles.socialLabel}>Hurtig login med</Text>
+            <Text style={styles.socialLabel}>{t('quickLogin')}</Text>
             <View style={styles.socialButtons}>
               <TouchableOpacity 
                 style={styles.socialButton}
@@ -98,12 +100,12 @@ export default function LandingScreen({ navigation }) {
             style={styles.joinButton}
             onPress={handleJoinNow}
           >
-            <Text style={styles.joinButtonText}>Join now</Text>
+            <Text style={styles.joinButtonText}>{t('joinNow')}</Text>
           </TouchableOpacity>
 
           {/* Login Link */}
           <TouchableOpacity onPress={handleLogin}>
-            <Text style={styles.loginLink}>Har du en bruger? Login</Text>
+            <Text style={styles.loginLink}>{t('haveAccount')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
