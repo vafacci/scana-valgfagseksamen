@@ -9,11 +9,13 @@ import { useLanguage } from '../../store/LanguageContext';
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, isLoggedIn, user, loading } = useAuth();
   const { findUser } = useUsers();
   const { t } = useLanguage();
 
   const handleLogin = async () => {
+    console.log('LoginScreen: handleLogin called');
+    
     // Always log in with a dummy user, regardless of input
     const dummyUser = {
       id: 'dev-user',
@@ -22,10 +24,14 @@ export default function LoginScreen({ navigation }) {
       createdAt: new Date().toISOString(),
     };
 
+    console.log('LoginScreen: Attempting login with user:', dummyUser);
+
     try {
       await login(dummyUser);
+      console.log('LoginScreen: Login successful, auth state should update');
       // No navigation needed if the app uses auth state switching
     } catch (error) {
+      console.error('LoginScreen: Login error:', error);
       // Fallback: do nothing, but avoid throwing to keep UX smooth
     }
   };
@@ -134,6 +140,14 @@ export default function LoginScreen({ navigation }) {
           <TouchableOpacity onPress={handleSignup}>
             <Text style={styles.signupLink}>{t('dontHaveAccount')} {t('createAccount')}</Text>
           </TouchableOpacity>
+
+          {/* Debug Info */}
+          <View style={styles.debugSection}>
+            <Text style={styles.debugText}>Debug Info:</Text>
+            <Text style={styles.debugText}>Loading: {loading ? 'Yes' : 'No'}</Text>
+            <Text style={styles.debugText}>Logged In: {isLoggedIn ? 'Yes' : 'No'}</Text>
+            <Text style={styles.debugText}>User: {user ? user.name : 'None'}</Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -297,5 +311,18 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     textAlign: 'center',
+  },
+  debugSection: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: colors.bg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.muted,
+  },
+  debugText: {
+    color: colors.muted,
+    fontSize: 12,
+    marginBottom: 2,
   },
 });
