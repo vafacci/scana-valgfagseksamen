@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, ScrollView, Animated } from 'react-native';
 import { colors } from '../theme/colors';
 import { useFavorites } from '../store/useFavorites';
 import priceData from '../data/prices.json';
@@ -10,6 +10,101 @@ export default function ResultsScreen({ navigation, route }) {
   
   // Filter state
   const [activeFilter, setActiveFilter] = useState('billigste');
+  
+  // Animation values for recommended products
+  const cardAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  
+  const pulseAnimations = useRef([
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1),
+  ]).current;
+  
+  // Animation values for filter buttons
+  const filterAnimations = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  
+  const filterPulseAnimations = useRef([
+    new Animated.Value(1),
+    new Animated.Value(1),
+    new Animated.Value(1),
+  ]).current;
+  
+  // Start animations on mount
+  useEffect(() => {
+    // Staggered entrance animations for recommended cards
+    const cardAnimationsSequence = Animated.stagger(200, 
+      cardAnimations.map(anim => 
+        Animated.spring(anim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        })
+      )
+    );
+    
+    // Staggered entrance animations for filter buttons
+    const filterAnimationsSequence = Animated.stagger(150,
+      filterAnimations.map(anim =>
+        Animated.spring(anim, {
+          toValue: 1,
+          tension: 120,
+          friction: 7,
+          useNativeDriver: true,
+        })
+      )
+    );
+    
+    // Start entrance animations
+    Animated.parallel([
+      cardAnimationsSequence,
+      filterAnimationsSequence,
+    ]).start();
+    
+    // Subtle pulse animations for recommended cards
+    pulseAnimations.forEach((anim, index) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1.05,
+            duration: 2000 + (index * 500),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 2000 + (index * 500),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+    
+    // Subtle pulse animations for filter buttons
+    filterPulseAnimations.forEach((anim, index) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 1.02,
+            duration: 3000 + (index * 300),
+            useNativeDriver: true,
+          }),
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 3000 + (index * 300),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+  }, []);
   
   // Use product data from barcode scan or fallback to mock data
   const productData = product || {
@@ -32,8 +127,12 @@ export default function ResultsScreen({ navigation, route }) {
         return a.price - b.price;
       case 'hurtigste':
         return parseInt(a.eta) - parseInt(b.eta);
-      case 'rating':
-        return parseFloat(b.rating) - parseFloat(a.rating);
+      case 'anbefalet':
+        // Anbefalingsscore: rating først, derefter laveste pris (fallback)
+        const ratingDiff = parseFloat(b.rating) - parseFloat(a.rating);
+        if (ratingDiff !== 0) return ratingDiff;
+        // Hvis rating er ens, sortér efter laveste pris
+        return a.price - b.price;
       default:
         return a.price - b.price;
     }
@@ -76,38 +175,26 @@ export default function ResultsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Section */}
+      {/* Top Section - Fixed */}
       <View style={styles.topSection}>
         <TouchableOpacity onPress={() => navigation.navigate('Tabs')}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
       </View>
 
-
-      {/* Product Info */}
-      <View style={styles.productInfo}>
-        <View style={styles.productHeader}>
-          <View style={styles.productTextInfo}>
-            <Text style={styles.productName}>{productData.name}</Text>
-            <Text style={styles.productCategory}>{productData.category}</Text>
-            <Text style={styles.productDescription}>{productData.description}</Text>
-            {barcode && (
-              <Text style={styles.barcodeInfo}>Barcode: {barcode}</Text>
-            )}
-          </View>
-          <Image 
-            source={{ uri: productData.image }} 
-            style={styles.productImage}
-            resizeMode="cover"
-          />
-        </View>
-      </View>
-
-      {/* Recommended Products */}
+      {/* Anbefalede Produkter - FIXED AT THE TOP */}
       <View style={styles.recommendedContainer}>
         <Text style={styles.sectionTitle}>Anbefalede Produkter</Text>
         <View style={styles.recommendedGrid}>
-          <View style={styles.recommendedCard}>
+          <Animated.View style={[
+            styles.recommendedCard,
+            {
+              transform: [
+                { scale: cardAnimations[0] },
+                { scale: pulseAnimations[0] }
+              ]
+            }
+          ]}>
             <Image 
               source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
               style={styles.recommendedImage}
@@ -118,9 +205,17 @@ export default function ResultsScreen({ navigation, route }) {
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
           
-          <View style={styles.recommendedCard}>
+          <Animated.View style={[
+            styles.recommendedCard,
+            {
+              transform: [
+                { scale: cardAnimations[1] },
+                { scale: pulseAnimations[1] }
+              ]
+            }
+          ]}>
             <Image 
               source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
               style={styles.recommendedImage}
@@ -131,20 +226,28 @@ export default function ResultsScreen({ navigation, route }) {
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
           
-          <View style={styles.recommendedCard}>
+          <Animated.View style={[
+            styles.recommendedCard,
+            {
+              transform: [
+                { scale: cardAnimations[2] },
+                { scale: pulseAnimations[2] }
+              ]
+            }
+          ]}>
             <Image 
               source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
               style={styles.recommendedImage}
               resizeMode="cover"
             />
-                <Text style={styles.recommendedName}>Bose QuietComfort</Text>
+            <Text style={styles.recommendedName}>Bose QuietComfort</Text>
             <Text style={styles.recommendedPrice}>2,799 kr</Text>
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         </View>
       </View>
 
@@ -153,6 +256,9 @@ export default function ResultsScreen({ navigation, route }) {
         <TouchableOpacity 
           style={[styles.filterTab, activeFilter === 'billigste' && styles.filterTabActive]}
           onPress={() => setActiveFilter('billigste')}
+          accessibilityLabel="Billigste"
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeFilter === 'billigste' }}
         >
           <Text style={[styles.filterText, activeFilter === 'billigste' && styles.filterTextActive]}>
             Billigste
@@ -162,6 +268,9 @@ export default function ResultsScreen({ navigation, route }) {
         <TouchableOpacity 
           style={[styles.filterTab, activeFilter === 'hurtigste' && styles.filterTabActive]}
           onPress={() => setActiveFilter('hurtigste')}
+          accessibilityLabel="Hurtigste"
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeFilter === 'hurtigste' }}
         >
           <Text style={[styles.filterText, activeFilter === 'hurtigste' && styles.filterTextActive]}>
             Hurtigste
@@ -169,25 +278,84 @@ export default function ResultsScreen({ navigation, route }) {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.filterTab, activeFilter === 'rating' && styles.filterTabActive]}
-          onPress={() => setActiveFilter('rating')}
+          style={[styles.filterTab, activeFilter === 'anbefalet' && styles.filterTabActive]}
+          onPress={() => setActiveFilter('anbefalet')}
+          accessibilityLabel="Anbefalet"
+          accessibilityRole="button"
+          accessibilityState={{ selected: activeFilter === 'anbefalet' }}
         >
-          <Text style={[styles.filterText, activeFilter === 'rating' && styles.filterTextActive]}>
-            Rating
+          <Text style={[styles.filterText, activeFilter === 'anbefalet' && styles.filterTextActive]}>
+            Anbefalet
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Price List */}
-      <View style={styles.priceListContainer}>
-        <FlatList
-          data={sortedOffers}
-          renderItem={renderOfferItem}
-          keyExtractor={(item, index) => `${item.store}-${index}`}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
-        />
-      </View>
+      {/* Scrollable Content */}
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+        <View style={styles.scrollContent}>
+          {/* Product Info */}
+          <View style={styles.productInfo}>
+            <View style={styles.productHeader}>
+              <View style={styles.productTextInfo}>
+                <Text style={styles.productName}>{productData.name}</Text>
+                <Text style={styles.productCategory}>{productData.category}</Text>
+                <Text style={styles.productDescription}>{productData.description}</Text>
+                {barcode && (
+                  <Text style={styles.barcodeInfo}>Barcode: {barcode}</Text>
+                )}
+              </View>
+              <Image 
+                source={{ uri: productData.image }} 
+                style={styles.productImage}
+                resizeMode="cover"
+              />
+            </View>
+          </View>
+
+          {/* Price List */}
+          <View style={styles.priceListContainer}>
+            {sortedOffers.map((item, index) => {
+              const favorite = isFavorite(item);
+              return (
+                <TouchableOpacity 
+                  key={index} 
+                  style={styles.offerCard}
+                  activeOpacity={0.8}
+                >
+                  {/* Header Row */}
+                  <View style={styles.offerHeader}>
+                    <Text style={styles.storeName}>{item.store}</Text>
+                    <TouchableOpacity 
+                      style={styles.heartButtonHeader}
+                      onPress={() => toggleFavorite({ ...item, productName })}
+                    >
+                      <Text style={[styles.heartIconHeader, favorite && styles.heartFilled]}>
+                        {favorite ? '❤️' : '♡'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {/* Content Area */}
+                  <View style={styles.offerContentWrapper}>
+                    <View style={styles.offerLeftContent}>
+                      <Text style={styles.price}>{item.price}kr,-</Text>
+                      <Text style={styles.shipping}>Fragt: {item.shipping}</Text>
+                      <Text style={styles.eta}>{item.eta} dage</Text>
+                      <Text style={styles.rating}>✰ {item.rating}</Text>
+                    </View>
+                    
+                    <View style={styles.offerActions}>
+                      <TouchableOpacity style={styles.storeButton}>
+                        <Text style={styles.storeButtonText}>Gå til butik</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -271,7 +439,9 @@ const styles = StyleSheet.create({
   },
   priceListContainer: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
@@ -284,36 +454,44 @@ const styles = StyleSheet.create({
   },
   offerCard: {
     backgroundColor: colors.card,
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 4,
-    height: 80,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    padding: 16,
+    minHeight: 140,
   },
   offerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  offerLeft: {
-    flex: 1,
-    marginRight: 12,
-  },
-  offerRight: {
-    alignItems: 'flex-end',
+  offerContentWrapper: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    height: '100%',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  offerLeftContent: {
+    flex: 1,
+  },
+  offerActions: {
+    alignSelf: 'flex-end',
+    minWidth: 120,
+    maxWidth: 160,
+  },
+  heartButtonHeader: {
+    padding: 8,
+    marginTop: -4,
+  },
+  heartIconHeader: {
+    fontSize: 20,
+    color: 'rgba(255, 255, 255, 0.9)',
+    width: 24,
+    height: 24,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   detailsRow: {
     flexDirection: 'row',
@@ -321,12 +499,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   storeName: {
-    fontSize: 14,
-    color: colors.muted,
-    fontWeight: '500',
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontWeight: '600',
+    lineHeight: 22,
+    flex: 1,
   },
   heartButton: {
-    padding: 4,
+    padding: 8,
   },
   heartIcon: {
     fontSize: 16,
@@ -343,42 +523,66 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   price: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 2,
+    fontSize: 24,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 1)',
+    marginBottom: 8,
+    lineHeight: 30,
   },
   detailsSection: {
     marginBottom: 6,
   },
   shipping: {
-    fontSize: 11,
-    color: colors.muted,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 2,
+    lineHeight: 19,
   },
   eta: {
-    fontSize: 11,
-    color: colors.muted,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 2,
+    lineHeight: 19,
   },
   rating: {
-    fontSize: 11,
-    color: colors.muted,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 19,
   },
   storeButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   storeButtonText: {
     color: colors.text,
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
   },
   recommendedContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
-    marginTop: -10,
+    paddingTop: 20,
+    marginBottom: 20,
+  },
+  filterContainer: {
+    backgroundColor: colors.bg,
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 12,
+    alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 0,
   },
   recommendedGrid: {
     flexDirection: 'row',
@@ -436,31 +640,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  filterContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    justifyContent: 'space-between',
-  },
   filterTab: {
     backgroundColor: colors.card,
+    paddingVertical: 0,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    height: 40,
+    minWidth: 104,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
   },
   filterTabActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   filterText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.muted,
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 20,
+    letterSpacing: 0,
+    opacity: 1,
   },
   filterTextActive: {
-    color: colors.text,
+    color: 'rgba(255, 255, 255, 1)',
     fontWeight: '600',
+    opacity: 1,
   },
 });

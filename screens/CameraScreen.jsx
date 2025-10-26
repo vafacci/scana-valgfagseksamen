@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated, Image } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated, Image, StatusBar } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { colors } from '../theme/colors';
@@ -48,46 +48,19 @@ export default function CameraScreen({ navigation }) {
   const [facing, setFacing] = useState('back');
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
-  const [showSuccess, setShowSuccess] = useState(false);
   const [capturedImageUri, setCapturedImageUri] = useState(null);
   const cameraRef = useRef(null);
   const { addScan } = useScanHistory();
   const { updateElo } = useUserProfile();
   const { t } = useLanguage();
-  
-  // Animation values
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const successScaleAnim = useRef(new Animated.Value(0)).current;
-  const shakeAnim = useRef(new Animated.Value(0)).current;
-  const confettiAnimations = useRef([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]).current;
 
-  const triggerConfetti = () => {
-    const animations = confettiAnimations.map((anim, index) => {
-      return Animated.sequence([
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 500 + (index * 150),
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim, {
-          toValue: 0,
-          duration: 2500,
-          useNativeDriver: true,
-        }),
-      ]);
-    });
-    
-    Animated.parallel(animations).start();
-  };
+  // Hide status bar for fullscreen camera
+  useEffect(() => {
+    StatusBar.setHidden(true, 'slide');
+    return () => {
+      StatusBar.setHidden(false, 'slide');
+    };
+  }, []);
 
   if (!permission) {
     // Camera permissions are still loading
@@ -171,72 +144,18 @@ export default function CameraScreen({ navigation }) {
       console.log('Photo taken, analyzing with AI...', photo.uri);
       setCapturedImageUri(photo.uri);
       setProcessingStep(t('processing'));
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 400));
       
       setProcessingStep(t('analyzing'));
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setProcessingStep(t('identifying'));
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       setProcessingStep(t('searching'));
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
-      setProcessingStep(t('success'));
-      setShowSuccess(true); // Re-enabled to continue flow
-      
-      // Trigger confetti immediately - COMMENTED OUT FOR TESTING
-      // triggerConfetti();
-      
-      // Start pulse animation for success icon
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.3,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-      
-      // Success animation
-      Animated.parallel([
-        Animated.spring(successScaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(shakeAnim, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          Animated.timing(shakeAnim, {
-            toValue: 0,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-        ])
-      ]).start();
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Navigate directly to success screen without showing success in CameraScreen
       
       // Use AirPods as demo product
       const demoProduct = AI_PRODUCT_DATABASE['airpods'];
@@ -252,8 +171,8 @@ export default function CameraScreen({ navigation }) {
         photoUri: photo.uri
       }, updateElo);
       
-      // Navigate to results - Re-enabled for testing
-      navigation.replace('Results', { 
+      // Navigate to success screen
+      navigation.replace('Success', { 
         product: demoProduct,
         analysis: { confidence: 0.95 },
         photoUri: photo.uri
@@ -265,7 +184,7 @@ export default function CameraScreen({ navigation }) {
     if (isProcessing) return;
     
     setIsProcessing(true);
-    setProcessingStep('Åbner album...');
+    setProcessingStep(t('openingAlbum'));
     
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -279,73 +198,19 @@ export default function CameraScreen({ navigation }) {
         const imageUri = result.assets[0].uri;
         setCapturedImageUri(imageUri);
         
-        setProcessingStep('Forbereder...');
-        await new Promise(resolve => setTimeout(resolve, 600));
+        setProcessingStep(t('processing'));
+        await new Promise(resolve => setTimeout(resolve, 400));
         
-        setProcessingStep('Sender til AI...');
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        setProcessingStep('AI analyserer...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setProcessingStep('Behandler data...');
+        setProcessingStep(t('analyzing'));
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        setProcessingStep('Fundet!');
-        setShowSuccess(true); // Re-enabled to continue flow
+        setProcessingStep(t('identifying'));
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Trigger confetti immediately - COMMENTED OUT FOR TESTING
-        // triggerConfetti();
+        setProcessingStep(t('searching'));
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Start pulse animation for success icon
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulseAnim, {
-              toValue: 1.3,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-            Animated.timing(pulseAnim, {
-              toValue: 1,
-              duration: 800,
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-        
-        // Success animation
-        Animated.parallel([
-          Animated.spring(successScaleAnim, {
-            toValue: 1,
-            tension: 100,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-          Animated.sequence([
-            Animated.timing(shakeAnim, {
-              toValue: 1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnim, {
-              toValue: 0,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnim, {
-              toValue: 1,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-            Animated.timing(shakeAnim, {
-              toValue: 0,
-              duration: 100,
-              useNativeDriver: true,
-            }),
-          ])
-        ]).start();
-        
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Navigate directly to success screen without showing success in CameraScreen
         
         // Use Samsung Buds as demo product for album images
         const demoProduct = AI_PRODUCT_DATABASE['samsung_buds'];
@@ -361,8 +226,8 @@ export default function CameraScreen({ navigation }) {
           photoUri: imageUri
         }, updateElo);
         
-        // Navigate to results - Re-enabled for testing
-        navigation.replace('Results', { 
+        // Navigate to success screen
+        navigation.replace('Success', { 
           product: demoProduct,
           analysis: { confidence: 0.92 },
           photoUri: imageUri
@@ -383,226 +248,57 @@ export default function CameraScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Top Section - only show when not processing */}
-      {!isProcessing && (
-        <View style={styles.topSection}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backArrow}>←</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+    <View style={styles.container}>
+      {/* Back button - Fullscreen */}
+      <TouchableOpacity 
+        style={styles.frozenBackButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Text style={styles.backArrow}>←</Text>
+      </TouchableOpacity>
 
-      {/* Camera View */}
-      <View style={styles.cameraContainer}>
-        {capturedImageUri && isProcessing ? (
-          <View style={styles.camera}>
-            <Image 
-              source={{ uri: capturedImageUri }}
-              style={styles.camera}
-              resizeMode="cover"
-            />
-            {/* Back button overlay */}
-            <TouchableOpacity 
-              style={styles.frozenBackButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Text style={styles.backArrow}>←</Text>
-            </TouchableOpacity>
-            {/* AI Scanning overlay */}
-            <View style={styles.scanOverlay}>
-              {isProcessing && (
-                <View style={styles.processingOverlay}>
-                  {!showSuccess ? (
-                    <>
-                      <ActivityIndicator size="large" color={colors.primary} />
-                      <Text style={styles.processingText}>{processingStep}</Text>
-                      <View style={styles.progressSteps}>
-                        <View style={[styles.step, processingStep.includes('Tager') && styles.stepActive]} />
-                        <View style={[styles.step, processingStep.includes('Forbereder') && styles.stepActive]} />
-                        <View style={[styles.step, processingStep.includes('Sender') && styles.stepActive]} />
-                        <View style={[styles.step, processingStep.includes('AI analyserer') && styles.stepActive]} />
-                        <View style={[styles.step, processingStep.includes('Behandler') && styles.stepActive]} />
-                        <View style={[styles.step, processingStep.includes('Fundet') && styles.stepActive]} />
-                      </View>
-                    </>
-                  ) : (
-                    <View>
-                      {/* Success state commented out for testing */}
-                      {/* Success container and text removed */}
-                    </View>
-                  )}
-                  
-                  {/* Confetti Elements - COMMENTED OUT FOR TESTING */}
-                  {/* {showSuccess && confettiAnimations.map((anim, index) => (
-                    <Animated.View
-                      key={index}
-                      style={[
-                        styles.confetti,
-                        {
-                          left: `${10 + (index * 12)}%`,
-                          transform: [
-                            {
-                              translateY: anim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, -300],
-                              }),
-                            },
-                            {
-                              rotate: anim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: ['0deg', '720deg'],
-                              }),
-                            },
-                            {
-                              scale: anim.interpolate({
-                                inputRange: [0, 0.5, 1],
-                                outputRange: [0, 1.2, 0.8],
-                              }),
-                            },
-                          ],
-                          opacity: anim,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.confettiEmoji}>
-                        {['🎉', '✨', '🎊', '💫', '⭐', '🌟', '💎', '🔥'][index]}
-                      </Text>
-                    </Animated.View>
-                  ))} */}
-                </View>
-              )}
-            </View>
-          </View>
-        ) : (
-          <CameraView 
-            style={styles.camera} 
-            facing={facing}
-            ref={cameraRef}
-          >
-          {/* AI Scanning overlay */}
+      {/* Camera View - Fullscreen */}
+      {capturedImageUri && isProcessing ? (
+        <Image 
+          source={{ uri: capturedImageUri }}
+          style={styles.fullscreenImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <CameraView 
+          style={styles.fullscreenImage} 
+          facing={facing}
+          ref={cameraRef}
+        >
           <View style={styles.scanOverlay}>
             <View style={styles.scanFrame}>
               <View style={[styles.corner, styles.topLeft]} />
               <View style={[styles.corner, styles.topRight]} />
               <View style={[styles.corner, styles.bottomLeft]} />
               <View style={[styles.corner, styles.bottomRight]} />
-            </View>
+        </View>
             <Text style={styles.scanInstruction}>
-              Ret kameraet mod produktet og tryk på den hvide knap, eller vælg et billede fra albummet
+              {t('cameraInstruction')}
             </Text>
-            {isProcessing && (
-              <View style={styles.processingOverlay}>
-                {!showSuccess ? (
-                  <>
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={styles.processingText}>{processingStep}</Text>
-                    <View style={styles.progressSteps}>
-                      <View style={[styles.step, processingStep.includes('Tager') && styles.stepActive]} />
-                      <View style={[styles.step, processingStep.includes('Forbereder') && styles.stepActive]} />
-                      <View style={[styles.step, processingStep.includes('Sender') && styles.stepActive]} />
-                      <View style={[styles.step, processingStep.includes('AI analyserer') && styles.stepActive]} />
-                      <View style={[styles.step, processingStep.includes('Behandler') && styles.stepActive]} />
-                      <View style={[styles.step, processingStep.includes('Fundet') && styles.stepActive]} />
-                    </View>
-                  </>
-                ) : (
-                  <Animated.View style={[
-                    styles.successContainer,
-                    {
-                      transform: [
-                        { scale: successScaleAnim }
-                      ]
-                    }
-                  ]}>
-                    <Animated.Text style={[
-                      styles.successIcon,
-                      {
-                        transform: [
-                          { scale: pulseAnim },
-                          {
-                            translateX: shakeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 10],
-                            })
-                          }
-                        ]
-                      }
-                    ]}>✨</Animated.Text>
-                    <Animated.Text style={[
-                      styles.successText,
-                      {
-                        transform: [
-                          {
-                            translateX: shakeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 8],
-                            })
-                          }
-                        ]
-                      }
-                    ]}>Produkt fundet!</Animated.Text>
-                    <Animated.Text style={[
-                      styles.successSubtext,
-                      {
-                        transform: [
-                          {
-                            translateX: shakeAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, 6],
-                            })
-                          }
-                        ]
-                      }
-                    ]}>Navigerer til resultater...</Animated.Text>
-                  </Animated.View>
-                )}
-                
-                {/* Confetti Elements */}
-                {showSuccess && confettiAnimations.map((anim, index) => (
-                  <Animated.View
-                    key={index}
-                    style={[
-                      styles.confetti,
-                      {
-                        left: `${10 + (index * 12)}%`,
-                        transform: [
-                          {
-                            translateY: anim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0, -300],
-                            }),
-                          },
-                          {
-                            rotate: anim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: ['0deg', '720deg'],
-                            }),
-                          },
-                          {
-                            scale: anim.interpolate({
-                              inputRange: [0, 0.5, 1],
-                              outputRange: [0, 1.2, 0.8],
-                            }),
-                          },
-                        ],
-                        opacity: anim,
-                      },
-                    ]}
-                  >
-                    <Text style={styles.confettiEmoji}>
-                      {['🎉', '✨', '🎊', '💫', '⭐', '🌟', '💎', '🔥'][index]}
-                    </Text>
-                  </Animated.View>
-                ))}
-              </View>
-            )}
           </View>
         </CameraView>
-        )}
-      </View>
+      )}
 
-      {/* Camera Controls - only show when not processing */}
+      {/* Processing overlay - Fullscreen */}
+      {isProcessing && (
+        <View style={styles.processingOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.processingText}>{processingStep}</Text>
+          <View style={styles.progressSteps}>
+            <View style={[styles.step, processingStep.includes(t('processing')) && styles.stepActive]} />
+            <View style={[styles.step, processingStep.includes(t('analyzing')) && styles.stepActive]} />
+            <View style={[styles.step, processingStep.includes(t('identifying')) && styles.stepActive]} />
+            <View style={[styles.step, processingStep.includes(t('searching')) && styles.stepActive]} />
+          </View>
+        </View>
+      )}
+
+      {/* Camera Controls */}
       {!isProcessing && (
         <View style={styles.controls}>
           <TouchableOpacity 
@@ -630,35 +326,63 @@ export default function CameraScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: colors.bg,
   },
+  fullscreenImage: {
+    width: '100%',
+    height: '100%',
+  },
+  camera: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    flex: 1,
+  },
   topSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 50,
+    paddingBottom: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 10,
   },
   backArrow: {
-    color: colors.text,
-    fontSize: 24,
-    marginRight: 16,
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   frozenBackButton: {
     position: 'absolute',
-    top: 20,
+    top: 40,
     left: 20,
     zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 5,
   },
   topLabel: {
     color: colors.muted,
@@ -773,9 +497,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 24,
   },
-  successIcon: {
-    fontSize: 60,
+  successIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  successIcon: {
+    fontSize: 40,
+    color: colors.text,
   },
   successText: {
     color: colors.text,
@@ -838,11 +571,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   controls: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 20,
+    paddingVertical: 30,
+    paddingBottom: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 10,
   },
   controlButton: {
     width: 50,
@@ -851,6 +591,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  controlIcon: {
+    fontSize: 24,
   },
   shutterButton: {
     width: 70,

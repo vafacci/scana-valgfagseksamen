@@ -74,6 +74,8 @@ const translations = {
     identifying: 'Identificerer produkt...',
     searching: 'Søger priser...',
     success: 'Succes!',
+    cameraInstruction: 'Ret kameraet mod produktet og tryk på den hvide knap, eller vælg et billede fra albummet',
+    openingAlbum: 'Åbner album...',
     
     // Results Screen
     bestOffers: 'Bedste tilbud',
@@ -161,6 +163,8 @@ const translations = {
     identifying: 'Identifying product...',
     searching: 'Searching prices...',
     success: 'Success!',
+    cameraInstruction: 'Point camera at product and press the white button, or select an image from the album',
+    openingAlbum: 'Opening album...',
     
     // Results Screen
     bestOffers: 'Best offers',

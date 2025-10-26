@@ -118,14 +118,6 @@ export default function SettingsScreen({ navigation, visible, onClose }) {
           <Text style={[styles.linkText, styles.deleteText]}>{t('deleteProfileLink')}</Text>
         </TouchableOpacity>
       </View>
-
-
-      {/* Footer Text */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          {t('footerText')}
-        </Text>
-      </View>
     </ScrollView>
   );
 

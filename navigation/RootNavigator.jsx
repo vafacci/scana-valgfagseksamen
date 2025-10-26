@@ -14,6 +14,7 @@ import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CameraScreen from '../screens/CameraScreen';
+import SuccessScreen from '../screens/SuccessScreen';
 import ResultsScreen from '../screens/ResultsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -21,7 +22,7 @@ const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
   const screenWidth = Dimensions.get('window').width;
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const WaveNavigationBar = ({ state, descriptors, navigation }) => {
     console.log('WaveNavigationBar props:', { state, descriptors, navigation });
@@ -202,7 +203,7 @@ function TabNavigator() {
                   </View>
                 </View>
               </View>
-              <Text style={styles.scanLabel}>{t('camera')}</Text>
+              <Text style={styles.scanLabel}>SCAN</Text>
               </Animated.View>
             </View>
           </TouchableOpacity>
@@ -250,6 +251,7 @@ function TabNavigator() {
 
   return (
     <Tab.Navigator
+      key={language} // Force re-render when language changes
       initialRouteName="HomeTab"
       screenOptions={{
         headerShown: false,
@@ -298,7 +300,7 @@ function TabNavigator() {
         name="HomeTab"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Hjem',
+          tabBarLabel: t('home'),
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>🏠</Text>
           ),
@@ -339,7 +341,7 @@ function TabNavigator() {
         name="FavoritesTab"
         component={FavoritesScreen}
         options={{
-          tabBarLabel: 'Favoritter',
+          tabBarLabel: t('favorites'),
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>❤️</Text>
           ),
@@ -390,7 +392,7 @@ function TabNavigator() {
         name="ProfileTab"
         component={ProfileScreen}
         options={{
-          tabBarLabel: 'Profil',
+          tabBarLabel: t('profile'),
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>👤</Text>
           ),
@@ -431,7 +433,7 @@ function TabNavigator() {
         name="SettingsTab"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Indstillinger',
+          tabBarLabel: t('settings'),
           tabBarIcon: ({ color }) => (
             <Text style={[styles.tabIcon, { color }]}>⚙</Text>
           ),
@@ -542,8 +544,9 @@ export default function RootNavigator() {
         name="Camera" 
         component={CameraScreen}
         options={{
+          headerShown: false,
           animation: 'slide_from_bottom',
-          animationDuration: 450,
+          animationDuration: 250,
           gestureEnabled: true,
           gestureDirection: 'vertical',
           cardStyleInterpolator: ({ current, layouts }) => {
@@ -557,15 +560,9 @@ export default function RootNavigator() {
                     }),
                   },
                   {
-                    rotateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['-30deg', '0deg'],
-                    }),
-                  },
-                  {
                     scale: current.progress.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.9, 1],
+                      outputRange: [0.95, 1],
                     }),
                   },
                 ],
@@ -579,12 +576,44 @@ export default function RootNavigator() {
         }}
       />
       <Stack.Screen 
+        name="Success" 
+        component={SuccessScreen}
+        options={{
+          animation: 'fade',
+          animationDuration: 150,
+        }}
+      />
+      <Stack.Screen 
         name="Results" 
         component={ResultsScreen}
         options={{
           animation: 'slide_from_right',
-          animationDuration: 400,
+          animationDuration: 250,
           gestureEnabled: true,
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                  {
+                    scale: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.95, 1],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            };
+          },
         }}
       />
     </Stack.Navigator>
@@ -647,7 +676,7 @@ const styles = StyleSheet.create({
   scanButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 5,
 
 
   },
