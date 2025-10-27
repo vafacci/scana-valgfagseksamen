@@ -124,7 +124,11 @@ export default function ProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Header with Avatar and Gear */}
         <View style={styles.header}>
           <Avatar 
@@ -255,7 +259,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollViewContent: {
     paddingTop: 30,
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
