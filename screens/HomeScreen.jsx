@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Image, Dimensions, Easing } from 'react-native';
 import { colors } from '../theme/colors';
 import { useLanguage } from '../store/LanguageContext';
 
@@ -29,53 +29,53 @@ export default function HomeScreen({ navigation }) {
     pic6: require('../assets/pic6.jpg'),
   };
   
-  // Carousel data
+  // Carousel data with translations
   const carouselData = [
     {
       id: 1,
       imageKey: 'pic1',
       icon: '📱',
-      title: 'Scan Produkter',
-      subtitle: 'Find priser hurtigt'
+      titleKey: 'carouselTitle1',
+      subtitleKey: 'carouselSubtitle1'
     },
     {
       id: 2,
       imageKey: 'pic2',
       icon: '💰',
-      title: 'Sammenlign Priser',
-      subtitle: 'Bedste tilbud'
+      titleKey: 'carouselTitle2',
+      subtitleKey: 'carouselSubtitle2'
     },
     {
       id: 3,
       imageKey: 'pic3',
       icon: '🛒',
-      title: 'Køb Smart',
-      subtitle: 'Spar penge'
+      titleKey: 'carouselTitle3',
+      subtitleKey: 'carouselSubtitle3'
     },
     {
       id: 4,
       imageKey: 'pic4',
       icon: '⭐',
-      title: 'Bedste Vurderinger',
-      subtitle: 'Kvalitetsprodukter'
+      titleKey: 'carouselTitle4',
+      subtitleKey: 'carouselSubtitle4'
     },
     {
       id: 5,
       imageKey: 'pic5',
       icon: '🔍',
-      title: 'Find Produkter',
-      subtitle: 'Smart søgning'
+      titleKey: 'carouselTitle5',
+      subtitleKey: 'carouselSubtitle5'
     },
     {
       id: 6,
       imageKey: 'pic6',
       icon: '💎',
-      title: 'Premium Kvalitet',
-      subtitle: 'Top mærker'
+      titleKey: 'carouselTitle6',
+      subtitleKey: 'carouselSubtitle6'
     }
   ];
   
-  // Carousel state
+  // Carousel state - simple and smooth
   const [currentIndex, setCurrentIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   
@@ -97,7 +97,7 @@ export default function HomeScreen({ navigation }) {
         Animated.loop(
           Animated.sequence([
             Animated.timing(anim, {
-              toValue: 1.08,
+              toValue: 1.05,
               duration: 2500 + (index * 400),
               useNativeDriver: true,
             }),
@@ -114,27 +114,26 @@ export default function HomeScreen({ navigation }) {
     startActionAnimations();
   }, []);
   
-  // Carousel auto-play effect
+  // Simple and smooth carousel auto-play
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % carouselData.length;
+      // Fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.ease,
+        useNativeDriver: true,
+      }).start(() => {
+        // Change image
+        setCurrentIndex((prevIndex) => (prevIndex + 1) % carouselData.length);
         
-        // Simple fade animation
-        Animated.sequence([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start();
-        
-        return nextIndex;
+        // Fade in
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          easing: Easing.ease,
+          useNativeDriver: true,
+        }).start();
       });
     }, 4000); // Change every 4 seconds
     
@@ -155,7 +154,7 @@ export default function HomeScreen({ navigation }) {
       {/* Carousel Card */}
       <View style={styles.carouselContainer}>
         <View style={styles.carouselCard}>
-          {/* Animated Background Image Only */}
+          {/* Animated Background Image */}
           <Animated.View style={[styles.carouselBackgroundContainer, { opacity: fadeAnim }]}>
             <Image 
               source={carouselImages[carouselData[currentIndex].imageKey]}
@@ -182,8 +181,8 @@ export default function HomeScreen({ navigation }) {
 
           {/* Text Content - Below Scanner */}
           <View style={styles.textContent}>
-            <Text style={styles.carouselTitle}>{carouselData[currentIndex].title}</Text>
-            <Text style={styles.carouselSubtitle}>{carouselData[currentIndex].subtitle}</Text>
+            <Text style={styles.carouselTitle}>{t(carouselData[currentIndex].titleKey)}</Text>
+            <Text style={styles.carouselSubtitle}>{t(carouselData[currentIndex].subtitleKey)}</Text>
           </View>
 
           {/* Scan Button - Center */}
@@ -192,7 +191,7 @@ export default function HomeScreen({ navigation }) {
               style={styles.scanButton}
               onPress={() => navigation.navigate('Camera')}
             >
-              <Text style={styles.scanButtonText}>Scan nu</Text>
+              <Text style={styles.scanButtonText}>{t('scanNow')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -220,7 +219,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.actionIcon}>
             <Text style={styles.actionIconText}>✈</Text>
           </View>
-          <Text style={styles.actionLabel}>Scan</Text>
+          <Text style={styles.actionLabel}>{t('actionScan')}</Text>
         </Animated.View>
         
         <Animated.View style={[
@@ -243,7 +242,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.actionIcon}>
             <Text style={styles.actionIconText}>✓</Text>
           </View>
-          <Text style={styles.actionLabel}>Prisliste</Text>
+          <Text style={styles.actionLabel}>{t('actionPriceList')}</Text>
         </Animated.View>
         
         <Animated.View style={[
@@ -266,7 +265,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.actionIcon}>
             <Text style={styles.actionIconText}>$</Text>
           </View>
-          <Text style={styles.actionLabel}>Køb</Text>
+          <Text style={styles.actionLabel}>{t('actionBuy')}</Text>
         </Animated.View>
       </View>
 
@@ -377,6 +376,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     textAlign: 'center',
+    textShadowColor: 'rgba(255, 255, 255, 0.8)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
   },
   carouselTitle: {
     fontSize: 32,
@@ -460,6 +462,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 2,
     borderColor: colors.text,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
@@ -472,6 +475,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
     fontWeight: '500',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
 });
 

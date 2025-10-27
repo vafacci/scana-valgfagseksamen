@@ -18,6 +18,22 @@ const translations = {
     readyToScan: 'Er du klar til at scanne?',
     scanDescription: 'Med kamera-scanneren kan du hurtigt finde prisen på en vare - uden at skulle søge manuelt.',
     scanNow: 'Scan nu',
+    actionScan: 'Scan',
+    actionPriceList: 'Prisliste',
+    actionBuy: 'Køb',
+    // Carousel titles
+    carouselTitle1: 'Scan Produkter',
+    carouselSubtitle1: 'Find priser hurtigt',
+    carouselTitle2: 'Sammenlign Priser',
+    carouselSubtitle2: 'Bedste tilbud',
+    carouselTitle3: 'Køb Smart',
+    carouselSubtitle3: 'Spar penge',
+    carouselTitle4: 'Bedste Vurderinger',
+    carouselSubtitle4: 'Kvalitetsprodukter',
+    carouselTitle5: 'Find Produkter',
+    carouselSubtitle5: 'Smart søgning',
+    carouselTitle6: 'Premium Kvalitet',
+    carouselSubtitle6: 'Top mærker',
     
     // Profile Screen
     memberSince: 'Medlem siden',
@@ -74,7 +90,7 @@ const translations = {
     identifying: 'Identificerer produkt...',
     searching: 'Søger priser...',
     success: 'Succes!',
-    cameraInstruction: 'Ret kameraet mod produktet og tryk på den hvide knap, eller vælg et billede fra albummet',
+    cameraInstruction: 'Scan produkt eller vælg fra album',
     openingAlbum: 'Åbner album...',
     
     // Results Screen
@@ -107,6 +123,22 @@ const translations = {
     readyToScan: 'Ready to scan?',
     scanDescription: 'With the camera scanner you can quickly find the price of an item - without having to search manually.',
     scanNow: 'Scan Now',
+    actionScan: 'Scan',
+    actionPriceList: 'Price List',
+    actionBuy: 'Buy',
+    // Carousel titles
+    carouselTitle1: 'Scan Products',
+    carouselSubtitle1: 'Find prices fast',
+    carouselTitle2: 'Compare Prices',
+    carouselSubtitle2: 'Best deals',
+    carouselTitle3: 'Buy Smart',
+    carouselSubtitle3: 'Save money',
+    carouselTitle4: 'Top Ratings',
+    carouselSubtitle4: 'Quality products',
+    carouselTitle5: 'Find Products',
+    carouselSubtitle5: 'Smart search',
+    carouselTitle6: 'Premium Quality',
+    carouselSubtitle6: 'Top brands',
     
     // Profile Screen
     memberSince: 'Member since',
@@ -163,7 +195,7 @@ const translations = {
     identifying: 'Identifying product...',
     searching: 'Searching prices...',
     success: 'Success!',
-    cameraInstruction: 'Point camera at product and press the white button, or select an image from the album',
+    cameraInstruction: 'Scan product or choose from album',
     openingAlbum: 'Opening album...',
     
     // Results Screen

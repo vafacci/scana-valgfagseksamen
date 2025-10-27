@@ -677,8 +677,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 5,
-
-
   },
   scannerIcon: {
     width: 65,
@@ -743,12 +741,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
   },
   scanLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '800',
+    color: "#fff",
     marginTop: 8,
     textAlign: 'center',
     width: 65,
+    textShadowColor: "#000",
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 2,
   },
   tabIcon: {
     fontSize: 16,

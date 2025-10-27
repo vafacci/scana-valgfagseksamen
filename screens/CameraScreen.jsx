@@ -436,9 +436,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 100,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingVertical: 10,
-    borderRadius: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   processingOverlay: {
     position: 'absolute',
