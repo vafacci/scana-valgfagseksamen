@@ -78,7 +78,7 @@ export default function FavoritesScreen() {
               style={styles.removeButton}
               onPress={() => removeFromFavorites(item.id)}
             >
-              <Text style={styles.removeIcon}>❌</Text>
+              <Text style={styles.removeIcon}>✕</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -268,10 +268,8 @@ const styles = StyleSheet.create({
   },
   removeIcon: {
     fontSize: 22,
-    color: colors.text,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    color: '#FF3B30',
+    fontWeight: 'bold',
   },
   scanCardContent: {
     zIndex: 3,

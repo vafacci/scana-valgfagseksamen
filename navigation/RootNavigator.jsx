@@ -26,6 +26,7 @@ function TabNavigator() {
 
   const WaveNavigationBar = ({ state, descriptors, navigation }) => {
     console.log('WaveNavigationBar props:', { state, descriptors, navigation });
+    const currentRouteName = state?.routes?.[state.index]?.name;
     
     // Animation values
     const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -91,22 +92,12 @@ function TabNavigator() {
     };
 
     const handleNavigation = (screenName, buttonKey) => {
-      animateButtonPress(buttonKey);
-      
-      // Add haptic feedback simulation with scale animation
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 0.95,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 300,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-      ]).start();
+      // Haptic feedback only; no visual button animations
+      if (buttonKey === 'scan') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
 
       if (screenName === 'Camera') {
         navigation.navigate(screenName);
@@ -139,8 +130,8 @@ function TabNavigator() {
                     { scale: buttonAnimations.home }
                   ] 
                 }}>
-                  <Text style={styles.tabIcon}>🏠</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 12 }]}>{t('home')}</Text>
+                  <Text style={[styles.tabIcon, currentRouteName === 'HomeTab' && styles.tabIconActive]}>🏠</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 12 }, currentRouteName === 'HomeTab' && styles.tabLabelActive]}>{t('home')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -156,8 +147,8 @@ function TabNavigator() {
                     { scale: buttonAnimations.favorites }
                   ] 
                 }}>
-                  <Text style={styles.tabIcon}>❤️</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 4 }]}>{t('favorites')}</Text>
+                  <Text style={[styles.tabIcon, currentRouteName === 'FavoritesTab' && styles.tabIconActive]}>❤️</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 4 }, currentRouteName === 'FavoritesTab' && styles.tabLabelActive]}>{t('favorites')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -221,8 +212,8 @@ function TabNavigator() {
                     { scale: buttonAnimations.profile }
                   ] 
                 }}>
-                  <Text style={styles.tabIcon}>👤</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 10 }]}>{t('profile')}</Text>
+                  <Text style={[styles.tabIcon, currentRouteName === 'ProfileTab' && styles.tabIconActive]}>👤</Text>
+                  <Text style={[styles.tabLabel, { marginLeft: 10 }, currentRouteName === 'ProfileTab' && styles.tabLabelActive]}>{t('profile')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -238,8 +229,8 @@ function TabNavigator() {
                     { scale: buttonAnimations.settings }
                   ] 
                 }}>
-                  <Text style={styles.tabIcon}>⚙</Text>
-                  <Text style={styles.tabLabel}>{t('settings')}</Text>
+                  <Text style={[styles.tabIcon, currentRouteName === 'SettingsTab' && styles.tabIconActive]}>⚙</Text>
+                  <Text style={[styles.tabLabel, currentRouteName === 'SettingsTab' && styles.tabLabelActive]}>{t('settings')}</Text>
                 </Animated.View>
               </View>
             </TouchableOpacity>
@@ -756,10 +747,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     marginLeft: 12,
   },
+  tabIconActive: {
+    color: colors.primary,
+  },
   tabLabel: {
     fontSize: 9,
     fontWeight: '500',
     color: '#999999',
+  },
+  tabLabelActive: {
+    color: colors.primary,
+    fontWeight: '800',
   },
   buttonContainer: {
     position: 'relative',

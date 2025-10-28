@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, ScrollView, Animated } from 'react-native';
 import { colors } from '../theme/colors';
+import OfferListItem from '../components/OfferListItem';
 import { useFavorites } from '../store/useFavorites';
 import priceData from '../data/prices.json';
 
@@ -317,46 +318,23 @@ export default function ResultsScreen({ navigation, route }) {
             {sortedOffers.map((item, index) => {
               const favorite = isFavorite({ ...item, productName: productData.name });
               return (
-                <TouchableOpacity 
-                  key={index} 
-                  style={styles.offerCard}
-                  activeOpacity={0.8}
-                >
-                  {/* Header Row */}
-                  <View style={styles.offerHeader}>
-                    <Text style={styles.storeName}>{item.store}</Text>
-                    <TouchableOpacity 
-                      style={styles.heartButtonHeader}
-                      onPress={() => toggleFavorite({ 
-                        ...item, 
-                        productName: productData.name,
-                        productImage: productData.image,
-                        category: productData.category,
-                        description: productData.description
-                      })}
-                    >
-                      <Text style={[styles.heartIconHeader, favorite && styles.heartFilled]}>
-                        {favorite ? '❤️' : '♡'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* Content Area */}
-                  <View style={styles.offerContentWrapper}>
-                    <View style={styles.offerLeftContent}>
-                      <Text style={styles.price}>{item.price}kr,-</Text>
-                      <Text style={styles.shipping}>Fragt: {item.shipping}</Text>
-                      <Text style={styles.eta}>{item.eta} dage</Text>
-                      <Text style={styles.rating}>✰ {item.rating}</Text>
-                    </View>
-                    
-                    <View style={styles.offerActions}>
-                      <TouchableOpacity style={styles.storeButton}>
-                        <Text style={styles.storeButtonText}>Gå til butik</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                <OfferListItem
+                  key={index}
+                  store={item.store}
+                  price={item.price}
+                  shipping={item.shipping}
+                  eta={item.eta}
+                  rating={item.rating}
+                  favorite={favorite}
+                  onToggleFavorite={() => toggleFavorite({ 
+                    ...item, 
+                    productName: productData.name,
+                    productImage: productData.image,
+                    category: productData.category,
+                    description: productData.description
+                  })}
+                  onPressStore={() => {}}
+                />
               );
             })}
           </View>

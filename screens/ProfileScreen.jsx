@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Share, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import ScanHistoryCard from '../components/ScanHistoryCard';
 import Avatar from '../components/Avatar';
 import StatTile from '../components/StatTile';
 import ListItem from '../components/ListItem';
@@ -177,60 +178,20 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.loadingText}>{t('loading')}</Text>
            ) : scanHistory.length > 0 ? (
              scanHistory.map((scan) => (
-               <View key={scan.id} style={styles.scanCard}>
-                 {/* Background Image */}
-                 <Image 
-                   source={getProductImage(scan.id)}
-                   style={styles.scanCardBackground}
-                   resizeMode="cover"
-                 />
-                 
-                 {/* Overlay for better text readability */}
-                 <View style={styles.scanCardOverlay} />
-                 
-                 <View style={styles.scanCardHeader}>
-                   <View style={styles.scanCardTitleRow}>
-                     <Text style={styles.scanCardTitle}>{scan.productName}</Text>
-                     <View style={styles.scanCardActions}>
-                       <TouchableOpacity 
-                         style={styles.shareButton}
-                         onPress={() => handleShareSingleScan(scan)}
-                       >
-                         <Ionicons name="share-outline" size={20} color={colors.text} />
-                       </TouchableOpacity>
-                       <TouchableOpacity 
-                         style={[
-                           styles.removeButton,
-                           removingScanId === scan.id && styles.removeButtonDisabled
-                         ]}
-                         onPress={() => handleRemoveScan(scan.id)}
-                         disabled={removingScanId === scan.id}
-                       >
-                         <Text style={styles.removeIcon}>
-                           {removingScanId === scan.id ? '⏳' : '✕'}
-                         </Text>
-                       </TouchableOpacity>
-                     </View>
-                   </View>
-                 </View>
-                 
-                 <View style={styles.scanCardContent}>
-                   <View style={styles.scanCardLeft}>
-                     <View style={styles.scanCardInfo}>
-                       <Text style={styles.scanCardStore}>Proshop</Text>
-                       <Text style={styles.scanCardShipping}>Fragt: 29 kr</Text>
-                       <Text style={styles.scanCardEta}>2-4 dage</Text>
-                       <Text style={styles.scanCardRating}>✰ 4.4 (1800)</Text>
-                       <Text style={styles.scanCardDate}>Tilføjet: {new Date(scan.date).toLocaleDateString('da-DK')}</Text>
-                     </View>
-                   </View>
-                 </View>
-                 
-                 {/* Price positioned at bottom right */}
-                 <View style={styles.scanCardPriceContainer}>
-                   <Text style={styles.scanCardPrice}>{scan.price}</Text>
-                 </View>
-               </View>
+               <ScanHistoryCard
+                 key={scan.id}
+                 productName={scan.productName}
+                 store={'Proshop'}
+                 price={scan.price}
+                 shipping={'29 kr'}
+                 eta={'2-4 dage'}
+                 rating={'4.4 (1800)'}
+                 date={new Date(scan.date).toLocaleDateString('da-DK')}
+                 imageSource={getProductImage(scan.id)}
+                 onShare={() => handleShareSingleScan(scan)}
+                 onRemove={() => handleRemoveScan(scan.id)}
+                 removing={removingScanId === scan.id}
+               />
              ))
           ) : (
             <Text style={styles.emptyText}>{t('noScansYet')}</Text>
