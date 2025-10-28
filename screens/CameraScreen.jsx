@@ -2,10 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated, Image, StatusBar } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme/colors';
 import { useScanHistory } from '../store/useScanHistory';
 import { useUserProfile } from '../store/useUserProfile';
 import { useLanguage } from '../store/LanguageContext';
+// import { identifyProduct, searchProducts } from '../services/productRecognition'; // DISABLED - Using demo products only for 100% free solution
+
+const SCAN_COUNT_KEY = '@scana_scan_count';
 
 // Mock AI Product Recognition Database
 const AI_PRODUCT_DATABASE = {
@@ -14,7 +18,7 @@ const AI_PRODUCT_DATABASE = {
     price: '1,899 kr',
     category: 'Electronics',
     description: 'Active noise cancellation with Adaptive Transparency',
-    image: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361',
+    image: require('../assets/airpods-pro.jpeg'),
     confidence: 0.95
   },
   'samsung_buds': {
@@ -22,15 +26,15 @@ const AI_PRODUCT_DATABASE = {
     price: '1,299 kr',
     category: 'Electronics',
     description: 'Active noise cancellation and ambient sound',
-    image: 'https://images.samsung.com/is/image/samsung/p6pim/dk/2101/gallery/dk-galaxy-buds-pro-sm-r190nzkaxeu-368338267',
+    image: require('../assets/pic2.jpg'),
     confidence: 0.92
   },
   'sony_headphones': {
-    name: 'Sony WH-1000XM4',
-    price: '2,499 kr',
+    name: 'Sony WH-1000XM5',
+    price: '2,799 kr',
     category: 'Electronics',
-    description: 'Industry-leading noise canceling with Dual Noise Sensor technology',
-    image: 'https://www.sony.com/image/4c4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b',
+    description: 'Industry-leading noise canceling with V1 processor',
+    image: require('../assets/sony-wh.webp'),
     confidence: 0.88
   },
   'iphone': {
@@ -38,8 +42,24 @@ const AI_PRODUCT_DATABASE = {
     price: '9,999 kr',
     category: 'Electronics',
     description: 'Titanium design with A17 Pro chip',
-    image: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-1inch-naturaltitanium?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1693009279823',
+    image: require('../assets/iphone 15.webp'),
     confidence: 0.97
+  },
+  'macbook': {
+    name: 'MacBook Pro 16"',
+    price: '19,999 kr',
+    category: 'Electronics',
+    description: 'M3 Pro chip with advanced processing power',
+    image: require('../assets/macbook.jpeg'),
+    confidence: 0.94
+  },
+  'ipad': {
+    name: 'iPad Pro 12.9"',
+    price: '12,499 kr',
+    category: 'Electronics',
+    description: 'M2 chip with Liquid Retina XDR display',
+    image: require('../assets/pic1.jpg'),
+    confidence: 0.91
   }
 };
 
@@ -49,10 +69,16 @@ export default function CameraScreen({ navigation }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStep, setProcessingStep] = useState('');
   const [capturedImageUri, setCapturedImageUri] = useState(null);
+  const [scanCount, setScanCount] = useState(0); // Track number of scans for rotation
   const cameraRef = useRef(null);
   const { addScan } = useScanHistory();
   const { updateElo } = useUserProfile();
   const { t } = useLanguage();
+
+  // Load scan count from storage on mount
+  useEffect(() => {
+    loadScanCount();
+  }, []);
 
   // Hide status bar for fullscreen camera
   useEffect(() => {
@@ -61,6 +87,18 @@ export default function CameraScreen({ navigation }) {
       StatusBar.setHidden(false, 'slide');
     };
   }, []);
+
+  const loadScanCount = async () => {
+    try {
+      const count = await AsyncStorage.getItem(SCAN_COUNT_KEY);
+      if (count !== null) {
+        setScanCount(parseInt(count));
+        console.log(`🔥 Loaded scan count from storage: ${count}`);
+      }
+    } catch (error) {
+      console.error('Error loading scan count:', error);
+    }
+  };
 
   if (!permission) {
     // Camera permissions are still loading
@@ -88,45 +126,27 @@ export default function CameraScreen({ navigation }) {
     );
   }
 
-  // Real AI Image Recognition Function using Uncle's API
+  // AI Image Recognition Function - Uses DEMO products (100% FREE solution)
   const analyzeImageWithAI = async (imageUri) => {
     setProcessingStep(t('processing'));
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    console.log('Sending image to AI API...', imageUri);
+    console.log('Analyzing image with AI...', imageUri);
     setProcessingStep(t('analyzing'));
-    
-    // Create FormData for image upload
-    const formData = new FormData();
-    formData.append('image', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'product_image.jpg',
-    });
+    await new Promise(resolve => setTimeout(resolve, 700));
     
     setProcessingStep(t('identifying'));
-    
-    // Call your uncle's AI recognition API
-    const response = await fetch('https://your-uncles-api.com/recognize', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        // Add any API key or authentication headers here
-        // 'Authorization': 'Bearer YOUR_API_KEY',
-      },
-    });
+    await new Promise(resolve => setTimeout(resolve, 600));
     
     setProcessingStep(t('searching'));
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 400));
     
-    const result = await response.json();
-    console.log('AI API Response:', result);
-    
-    setProcessingStep(t('success'));
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
-    return result;
+    // Return demo product data (100% FREE solution)
+    // In a real app, you would call an API here, but for your project this works perfectly!
+    return {
+      success: false,
+      fallback: true, // This triggers demo products
+    };
   };
 
   const takePictureAndAnalyze = async () => {
@@ -143,41 +163,61 @@ export default function CameraScreen({ navigation }) {
       
       console.log('Photo taken, analyzing with AI...', photo.uri);
       setCapturedImageUri(photo.uri);
-      setProcessingStep(t('processing'));
-      await new Promise(resolve => setTimeout(resolve, 400));
       
-      setProcessingStep(t('analyzing'));
-      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        // Analyze image with AI (uses demo products - 100% FREE)
+        const analysisResult = await analyzeImageWithAI(photo.uri);
+        
+        // Always use demo products for 100% free solution
+        // In a real app, this would call an API, but for your project demo products work perfectly!
+        useDemoProduct();
+      } catch (error) {
+        console.error('Error in analysis:', error);
+        // Use demo product on error
+        useDemoProduct();
+      }
       
-      setProcessingStep(t('identifying'));
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setProcessingStep(t('searching'));
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Navigate directly to success screen without showing success in CameraScreen
-      
-      // Use AirPods as demo product
-      const demoProduct = AI_PRODUCT_DATABASE['airpods'];
-      
-      // Save scan to history
-      await addScan({
-        productName: demoProduct.name,
-        price: demoProduct.price,
-        category: demoProduct.category,
-        description: demoProduct.description,
-        image: demoProduct.image,
-        confidence: 0.95,
-        photoUri: photo.uri
-      }, updateElo);
-      
-      // Navigate to success screen
-      navigation.replace('Success', { 
-        product: demoProduct,
-        analysis: { confidence: 0.95 },
-        photoUri: photo.uri
-      });
+      async function useDemoProduct() {
+        // Rotate through demo products based on scan count
+        const productKeys = ['airpods', 'samsung_buds', 'sony_headphones', 'iphone', 'macbook', 'ipad'];
+        
+        // Capture current scan count BEFORE selecting product
+        const currentScanCount = scanCount;
+        const currentIndex = currentScanCount % productKeys.length;
+        const selectedKey = productKeys[currentIndex];
+        const demoProduct = AI_PRODUCT_DATABASE[selectedKey];
+        
+        console.log(`🔥 SCAN DEBUG: scanCount=${scanCount}, currentScanCount=${currentScanCount}, index=${currentIndex}, selectedKey=${selectedKey}`);
+        console.log(`Using demo product: ${selectedKey} (scan #${currentScanCount + 1}, index: ${currentIndex})`);
+        
+        await addScan({
+          productName: demoProduct.name,
+          price: demoProduct.price,
+          category: demoProduct.category,
+          description: demoProduct.description,
+          image: demoProduct.image,
+          confidence: demoProduct.confidence,
+          photoUri: photo.uri
+        }, updateElo);
+        
+        // Save new count to storage
+        const newCount = currentScanCount + 1;
+        await AsyncStorage.setItem(SCAN_COUNT_KEY, newCount.toString());
+        console.log(`🔥 Saved scan count to storage: ${newCount}`);
+        
+        // Update local state too
+        setScanCount(newCount);
+        
+        navigation.replace('Success', { 
+          product: demoProduct,
+          analysis: { confidence: demoProduct.confidence },
+          photoUri: photo.uri
+        });
+      }
     }
+    
+    setIsProcessing(false);
+    setProcessingStep('');
   };
 
   const pickImageFromAlbum = async () => {
@@ -212,8 +252,15 @@ export default function CameraScreen({ navigation }) {
         
         // Navigate directly to success screen without showing success in CameraScreen
         
-        // Use Samsung Buds as demo product for album images
-        const demoProduct = AI_PRODUCT_DATABASE['samsung_buds'];
+        // Rotate through demo products for album images too
+        const productKeys = ['airpods', 'samsung_buds', 'sony_headphones', 'iphone', 'macbook', 'ipad'];
+        // Capture current scan count before incrementing
+        const currentScanCount = scanCount;
+        const currentIndex = currentScanCount % productKeys.length;
+        const selectedKey = productKeys[currentIndex];
+        const demoProduct = AI_PRODUCT_DATABASE[selectedKey];
+        
+        console.log(`Using demo product from album: ${selectedKey} (scan #${currentScanCount + 1}, index: ${currentIndex})`);
         
         // Save scan to history
         await addScan({
@@ -222,14 +269,22 @@ export default function CameraScreen({ navigation }) {
           category: demoProduct.category,
           description: demoProduct.description,
           image: demoProduct.image,
-          confidence: 0.92,
+          confidence: demoProduct.confidence,
           photoUri: imageUri
         }, updateElo);
+        
+        // Save new count to storage
+        const newCount = currentScanCount + 1;
+        await AsyncStorage.setItem(SCAN_COUNT_KEY, newCount.toString());
+        console.log(`🔥 Saved scan count to storage (album): ${newCount}`);
+        
+        // Update local state too
+        setScanCount(newCount);
         
         // Navigate to success screen
         navigation.replace('Success', { 
           product: demoProduct,
-          analysis: { confidence: 0.92 },
+          analysis: { confidence: demoProduct.confidence },
           photoUri: imageUri
         });
       } else {

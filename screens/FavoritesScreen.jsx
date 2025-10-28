@@ -48,11 +48,15 @@ export default function FavoritesScreen() {
     }
   };
 
-  const renderFavoriteItem = ({ item }) => (
+  const renderFavoriteItem = ({ item }) => {
+    // Use product image if available, otherwise use fallback
+    const imageSource = item.productImage || getProductImage(item.id);
+    
+    return (
     <View style={styles.scanCard}>
       {/* Background Image */}
       <Image 
-        source={getProductImage(item.id)}
+        source={imageSource}
         style={styles.scanCardBackground}
         resizeMode="cover"
       />
@@ -94,7 +98,8 @@ export default function FavoritesScreen() {
         <Text style={styles.scanCardPrice}>{item.price}kr,-</Text>
       </View>
     </View>
-  );
+    );
+  };
 
   if (loading) {
     return (

@@ -196,12 +196,12 @@ export default function ResultsScreen({ navigation, route }) {
             }
           ]}>
             <Image 
-              source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
+              source={require('../assets/airpods-pro.jpeg')} 
               style={styles.recommendedImage}
               resizeMode="cover"
             />
-            <Text style={styles.recommendedName}>Apple AirPods Pro (3rd Gen)</Text>
-            <Text style={styles.recommendedPrice}>2,199 kr</Text>
+            <Text style={styles.recommendedName}>Apple AirPods Pro</Text>
+            <Text style={styles.recommendedPrice}>1,899 kr</Text>
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
@@ -217,12 +217,12 @@ export default function ResultsScreen({ navigation, route }) {
             }
           ]}>
             <Image 
-              source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
+              source={require('../assets/sony-wh.webp')} 
               style={styles.recommendedImage}
               resizeMode="cover"
             />
             <Text style={styles.recommendedName}>Sony WH-1000XM5</Text>
-            <Text style={styles.recommendedPrice}>2,499 kr</Text>
+            <Text style={styles.recommendedPrice}>2,799 kr</Text>
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
@@ -238,12 +238,12 @@ export default function ResultsScreen({ navigation, route }) {
             }
           ]}>
             <Image 
-              source={{ uri: 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361' }} 
+              source={require('../assets/bose.jpg')} 
               style={styles.recommendedImage}
               resizeMode="cover"
             />
             <Text style={styles.recommendedName}>Bose QuietComfort</Text>
-            <Text style={styles.recommendedPrice}>2,799 kr</Text>
+            <Text style={styles.recommendedPrice}>3,199 kr</Text>
             <TouchableOpacity style={styles.recommendedButton}>
               <Text style={styles.recommendedButtonText}>Se tilbud</Text>
             </TouchableOpacity>
@@ -305,7 +305,7 @@ export default function ResultsScreen({ navigation, route }) {
                 )}
               </View>
               <Image 
-                source={{ uri: productData.image }} 
+                source={typeof productData.image === 'string' ? { uri: productData.image } : productData.image} 
                 style={styles.productImage}
                 resizeMode="cover"
               />
@@ -315,7 +315,7 @@ export default function ResultsScreen({ navigation, route }) {
           {/* Price List */}
           <View style={styles.priceListContainer}>
             {sortedOffers.map((item, index) => {
-              const favorite = isFavorite(item);
+              const favorite = isFavorite({ ...item, productName: productData.name });
               return (
                 <TouchableOpacity 
                   key={index} 
@@ -327,7 +327,13 @@ export default function ResultsScreen({ navigation, route }) {
                     <Text style={styles.storeName}>{item.store}</Text>
                     <TouchableOpacity 
                       style={styles.heartButtonHeader}
-                      onPress={() => toggleFavorite({ ...item, productName })}
+                      onPress={() => toggleFavorite({ 
+                        ...item, 
+                        productName: productData.name,
+                        productImage: productData.image,
+                        category: productData.category,
+                        description: productData.description
+                      })}
                     >
                       <Text style={[styles.heartIconHeader, favorite && styles.heartFilled]}>
                         {favorite ? '❤️' : '♡'}

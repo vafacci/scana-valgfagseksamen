@@ -35,7 +35,8 @@ export function useFavorites() {
   };
 
   const addToFavorites = async (offer) => {
-    const offerId = `${offer.store}-${offer.price}`;
+    // Include product name in ID to make it unique per product
+    const offerId = `${offer.productName || 'unknown'}-${offer.store}-${offer.price}`;
     const isAlreadyFavorite = favorites.some(fav => fav.id === offerId);
     
     if (!isAlreadyFavorite) {
@@ -47,7 +48,10 @@ export function useFavorites() {
         eta: offer.eta,
         rating: offer.rating,
         reviewCount: offer.reviewCount,
-        productName: offer.productName || 'Apple AirPods Pro (2nd Gen)',
+        productName: offer.productName || 'Unknown Product',
+        productImage: offer.productImage, // Add product image
+        category: offer.category || 'Electronics', // Add category
+        description: offer.description || '', // Add description
         addedAt: new Date().toISOString(),
       };
       
@@ -62,7 +66,8 @@ export function useFavorites() {
   };
 
   const toggleFavorite = async (offer) => {
-    const offerId = `${offer.store}-${offer.price}`;
+    // Include product name in ID to make it unique per product
+    const offerId = `${offer.productName || 'unknown'}-${offer.store}-${offer.price}`;
     const isFavorite = favorites.some(fav => fav.id === offerId);
     
     if (isFavorite) {
@@ -73,7 +78,8 @@ export function useFavorites() {
   };
 
   const isFavorite = (offer) => {
-    const offerId = `${offer.store}-${offer.price}`;
+    // Include product name in ID to make it unique per product
+    const offerId = `${offer.productName || 'unknown'}-${offer.store}-${offer.price}`;
     return favorites.some(fav => fav.id === offerId);
   };
 
