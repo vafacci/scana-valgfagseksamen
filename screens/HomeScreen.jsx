@@ -5,19 +5,8 @@ import { useLanguage } from '../store/LanguageContext';
 
 export default function HomeScreen({ navigation }) {
   const { t, language } = useLanguage();
-  
-  // Animation values for action buttons
-  const actionAnimations = useRef([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]).current;
-  
-  const actionPulseAnimations = useRef([
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]).current;
+  const screenHeight = Dimensions.get('window').height;
+  const offset15Percent = screenHeight * 0.10;
   
   // Image mapping for carousel
   const carouselImages = {
@@ -79,40 +68,6 @@ export default function HomeScreen({ navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   
-  // Start animations when component mounts
-  useEffect(() => {
-    const startActionAnimations = () => {
-      // Staggered entrance animations
-      actionAnimations.forEach((anim, index) => {
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 600,
-          delay: 1000 + (index * 200), // Start after main content
-          useNativeDriver: true,
-        }).start();
-      });
-      
-      // Subtle pulse animations
-      actionPulseAnimations.forEach((anim, index) => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(anim, {
-              toValue: 1.05,
-              duration: 2500 + (index * 400),
-              useNativeDriver: true,
-            }),
-            Animated.timing(anim, {
-              toValue: 1,
-              duration: 2500 + (index * 400),
-              useNativeDriver: true,
-            }),
-          ])
-        ).start();
-      });
-    };
-    
-    startActionAnimations();
-  }, []);
   
   // Simple and smooth carousel auto-play
   useEffect(() => {
@@ -166,7 +121,7 @@ export default function HomeScreen({ navigation }) {
           
           {/* Static UI Elements (No Animation) */}
           {/* Scanner Icon - Top */}
-          <View style={styles.scannerIconTop}>
+          <View style={[styles.scannerIconTop, { top: 60 + offset15Percent }]}>
             <View style={styles.scannerIconBackground}>
               <View style={styles.scannerInner}>
                 <View style={styles.scannerCorners}>
@@ -180,94 +135,14 @@ export default function HomeScreen({ navigation }) {
           </View>
 
           {/* Text Content - Below Scanner */}
-          <View style={styles.textContent}>
+          <View style={[styles.textContent, { top: 180 + offset15Percent }]}>
             <Text style={styles.carouselTitle}>{t(carouselData[currentIndex].titleKey)}</Text>
             <Text style={styles.carouselSubtitle}>{t(carouselData[currentIndex].subtitleKey)}</Text>
           </View>
 
-          {/* Scan Button - Center */}
-          <View style={styles.scanButtonCenter}>
-            <TouchableOpacity 
-              style={styles.scanButton}
-              onPress={() => navigation.navigate('Camera')}
-            >
-              <Text style={styles.scanButtonText}>{t('scanNow')}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </View>
 
-      {/* Mid-Section Action Buttons */}
-      <View style={styles.actionButtons}>
-        <Animated.View style={[
-          styles.actionItem,
-          {
-            transform: [
-              { 
-                translateY: actionAnimations[0].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [40, 0],
-                })
-              },
-              { 
-                scale: actionPulseAnimations[0]
-              }
-            ],
-            opacity: actionAnimations[0],
-          }
-        ]}>
-          <View style={styles.actionIcon}>
-            <Text style={styles.actionIconText}>✈</Text>
-          </View>
-          <Text style={styles.actionLabel}>{t('actionScan')}</Text>
-        </Animated.View>
-        
-        <Animated.View style={[
-          styles.actionItem,
-          {
-            transform: [
-              { 
-                translateY: actionAnimations[1].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [40, 0],
-                })
-              },
-              { 
-                scale: actionPulseAnimations[1]
-              }
-            ],
-            opacity: actionAnimations[1],
-          }
-        ]}>
-          <View style={styles.actionIcon}>
-            <Text style={styles.actionIconText}>✓</Text>
-          </View>
-          <Text style={styles.actionLabel}>{t('actionPriceList')}</Text>
-        </Animated.View>
-        
-        <Animated.View style={[
-          styles.actionItem,
-          {
-            transform: [
-              { 
-                translateY: actionAnimations[2].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [40, 0],
-                })
-              },
-              { 
-                scale: actionPulseAnimations[2]
-              }
-            ],
-            opacity: actionAnimations[2],
-          }
-        ]}>
-          <View style={styles.actionIcon}>
-            <Text style={styles.actionIconText}>$</Text>
-          </View>
-          <Text style={styles.actionLabel}>{t('actionBuy')}</Text>
-        </Animated.View>
-      </View>
 
     </SafeAreaView>
   );
@@ -334,7 +209,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 3,
-    marginTop: 50,
   },
   scannerIconBackground: {
     width: 100,
@@ -351,34 +225,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 3,
-    marginTop: 50
-  },
-  scanButtonCenter: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 3,
-    transform: [{ translateY: -25 }],
-    marginTop: 50,
-  },
-  scanButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 80,
-    paddingVertical: 12,
-    borderRadius: 8,
-    minWidth: 300,
-    alignItems: 'center',
-  },
-  scanButtonText: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '600',
-    textAlign: 'center',
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 6,
   },
   carouselTitle: {
     fontSize: 32,
@@ -442,43 +288,6 @@ const styles = StyleSheet.create({
     right: 0,
     borderLeftWidth: 0,
     borderTopWidth: 0,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    position: 'absolute',
-    bottom: 150,
-    left: 0,
-    right: 0,
-  },
-  actionItem: {
-    alignItems: 'center',
-  },
-  actionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: colors.text,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  actionIconText: {
-    color: colors.text,
-    fontSize: 20,
-  },
-  actionLabel: {
-    color: colors.text,
-    fontSize: 14,
-    fontWeight: '500',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
   },
 });
 

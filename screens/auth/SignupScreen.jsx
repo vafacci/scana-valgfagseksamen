@@ -51,9 +51,6 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
-  const handleLogin = () => {
-    navigation.navigate('Login');
-  };
 
   const handleSocialLogin = (provider) => {
     console.log(`${provider} signup pressed`);
@@ -162,10 +159,6 @@ export default function SignupScreen({ navigation }) {
             <Text style={styles.joinButtonText}>Join now</Text>
           </TouchableOpacity>
 
-          {/* Login Link */}
-          <TouchableOpacity onPress={handleLogin}>
-            <Text style={styles.loginLink}>Har du en bruger? Login</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -6,9 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import Svg, { Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../theme/colors';
-import { useAuth } from '../store/useAuth';
 import { useLanguage } from '../store/LanguageContext';
-import AuthNavigator from './AuthNavigator';
 import HomeScreen from '../screens/HomeScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -465,21 +463,6 @@ function TabNavigator() {
 }
 
 export default function RootNavigator() {
-  const { isLoggedIn, loading } = useAuth();
-  
-  console.log('RootNavigator render - isLoggedIn:', isLoggedIn, 'loading:', loading);
-
-  if (loading) {
-    console.log('RootNavigator: Still loading...');
-    return null;
-  }
-
-  if (!isLoggedIn) {
-    console.log('RootNavigator: User not logged in, showing AuthNavigator');
-    return <AuthNavigator />;
-  }
-
-  console.log('RootNavigator: User logged in, showing TabNavigator');
   return (
     <Stack.Navigator
       initialRouteName="Tabs"
