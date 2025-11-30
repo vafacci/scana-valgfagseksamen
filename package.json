@@ -5,11 +5,13 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "start": "expo start",
-    "start:ios": "expo start --ios",
-    "start:android": "expo start --android",
-    "start:localhost": "expo start --localhost",
-    "start:tunnel": "expo start --tunnel"
+    "start": "expo start --lan --clear",
+    "start:ios": "expo run:ios",
+    "ios": "expo run:ios",
+    "start:android": "expo start --android --clear",
+    "start:localhost": "expo start --localhost --clear",
+    "start:tunnel": "expo start --tunnel --clear",
+    "start:lan": "expo start --lan --clear"
   },
   "keywords": [],
   "author": "",
