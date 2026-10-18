@@ -1,9 +1,18 @@
-import { useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  addUser,
+  authenticateUser,
+  checkEmailExists,
+  updateUserPassword,
+  upsertProviderUser,
+} from './useUsers';
+import { syncProfileFromAuth } from './useUserProfile';
 
 const AUTH_KEY = '@scana_auth';
+const AuthContext = createContext(null);
 
-export function useAuth() {
+export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,51 +21,73 @@ export function useAuth() {
     loadAuthState();
   }, []);
 
+  const persist = async (userData) => {
+    const authData = {
+      user: userData,
+      timestamp: new Date().toISOString(),
+    };
+    await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(authData));
+    await syncProfileFromAuth(userData);
+    setUser(userData);
+    setIsLoggedIn(true);
+  };
+
   const loadAuthState = async () => {
-    console.log('useAuth: Loading auth state...');
     try {
       const storedAuth = await AsyncStorage.getItem(AUTH_KEY);
-      console.log('useAuth: Stored auth data:', storedAuth);
-      
       if (storedAuth) {
         const authData = JSON.parse(storedAuth);
-        console.log('useAuth: Parsed auth data:', authData);
         setIsLoggedIn(true);
         setUser(authData.user);
-        console.log('useAuth: User logged in:', authData.user);
       } else {
-        console.log('useAuth: No stored auth data, user not logged in');
         setIsLoggedIn(false);
         setUser(null);
       }
     } catch (error) {
-      console.error('useAuth: Error loading auth state:', error);
+      console.error('Error loading auth state:', error);
       setIsLoggedIn(false);
       setUser(null);
     } finally {
-      console.log('useAuth: Auth loading completed, setting loading to false');
       setLoading(false);
     }
   };
 
-  const login = async (userData) => {
-    console.log('useAuth.login called with:', userData);
-    try {
-      const authData = {
-        user: userData,
-        timestamp: new Date().toISOString(),
-      };
-      console.log('useAuth: Saving auth data to AsyncStorage:', authData);
-      await AsyncStorage.setItem(AUTH_KEY, JSON.stringify(authData));
-      console.log('useAuth: Auth data saved successfully');
-      
-      setIsLoggedIn(true);
-      setUser(userData);
-      console.log('useAuth.login completed, isLoggedIn set to true, user set to:', userData);
-    } catch (error) {
-      console.error('useAuth.login error:', error);
+  const loginWithEmail = async (email, password) => {
+    const found = await authenticateUser(email, password);
+    if (!found) {
+      const error = new Error('invalid_credentials');
+      error.code = 'invalid_credentials';
       throw error;
     }
+    await persist(found);
+    return found;
+  };
+
+  const signup = async ({ email, password, name }) => {
+    if (await checkEmailExists(email)) {
+      const error = new Error('email_in_use');
+      error.code = 'email_in_use';
+      throw error;
+    }
+    const created = await addUser({ email, password, name, provider: 'email' });
+    await persist(created);
+    return created;
+  };
+
+  const loginWithProvider = async (profile) => {
+    const found = await upsertProviderUser(profile);
+    await persist(found);
+    return found;
+  };
+
+  const resetPassword = async (email, newPassword) => {
+    const updated = await updateUserPassword(email, newPassword);
+    if (!updated) {
+      const error = new Error('account_not_found');
+      error.code = 'account_not_found';
+      throw error;
+    }
+    return true;
   };
 
   const logout = async () => {
@@ -65,11 +96,27 @@ export function useAuth() {
     setUser(null);
   };
 
-  return {
-    isLoggedIn,
-    user,
-    loading,
-    login,
-    logout,
-  };
+  const value = useMemo(
+    () => ({
+      isLoggedIn,
+      user,
+      loading,
+      loginWithEmail,
+      signup,
+      loginWithProvider,
+      resetPassword,
+      logout,
+    }),
+    [isLoggedIn, user, loading]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }

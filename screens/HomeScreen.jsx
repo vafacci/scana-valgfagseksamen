@@ -1,149 +1,157 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Animated, Image, Dimensions, Easing } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  TextInput,
+  Keyboard,
+} from 'react-native';
+import WebScroll from '../components/WebScroll';
+import Tap from '../components/Tap';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '../theme/colors';
 import { useLanguage } from '../store/LanguageContext';
+import { searchCatalog, findProductByName, findProductById, PRICES_UPDATED } from '../data/catalog';
+import { useScanHistory } from '../store/useScanHistory';
 
 export default function HomeScreen({ navigation }) {
-  const { t, language } = useLanguage();
-  const screenHeight = Dimensions.get('window').height;
-  const offset15Percent = screenHeight * 0.10;
-  
-  // Image mapping for carousel
-  const carouselImages = {
-    pic1: require('../assets/pic1.jpg'),
-    pic2: require('../assets/pic2.jpg'),
-    pic3: require('../assets/pic3.jpg'),
-    pic4: require('../assets/pic4.jpg'),
-    pic5: require('../assets/pic5.jpg'),
-    pic6: require('../assets/pic6.jpg'),
+  const { t } = useLanguage();
+  const { scanHistory, loadScanHistory } = useScanHistory();
+  const [query, setQuery] = useState('');
+  const searching = query.trim().length >= 2;
+  const results = searching ? searchCatalog(query) : [];
+  const latest = scanHistory[0];
+  const latestProduct = latest
+    ? latest.productId
+      ? findProductById(latest.productId)
+      : findProductByName(latest.productName)
+    : null;
+
+  useFocusEffect(
+    useCallback(() => {
+      loadScanHistory();
+    }, [loadScanHistory])
+  );
+
+  const openProduct = (product) => {
+    if (!product) return;
+    Keyboard.dismiss();
+    const root = navigation.getParent?.() ?? navigation;
+    root.navigate('Results', { product });
   };
-  
-  // Carousel data with translations
-  const carouselData = [
-    {
-      id: 1,
-      imageKey: 'pic1',
-      icon: '📱',
-      titleKey: 'carouselTitle1',
-      subtitleKey: 'carouselSubtitle1'
-    },
-    {
-      id: 2,
-      imageKey: 'pic2',
-      icon: '💰',
-      titleKey: 'carouselTitle2',
-      subtitleKey: 'carouselSubtitle2'
-    },
-    {
-      id: 3,
-      imageKey: 'pic3',
-      icon: '🛒',
-      titleKey: 'carouselTitle3',
-      subtitleKey: 'carouselSubtitle3'
-    },
-    {
-      id: 4,
-      imageKey: 'pic4',
-      icon: '⭐',
-      titleKey: 'carouselTitle4',
-      subtitleKey: 'carouselSubtitle4'
-    },
-    {
-      id: 5,
-      imageKey: 'pic5',
-      icon: '🔍',
-      titleKey: 'carouselTitle5',
-      subtitleKey: 'carouselSubtitle5'
-    },
-    {
-      id: 6,
-      imageKey: 'pic6',
-      icon: '💎',
-      titleKey: 'carouselTitle6',
-      subtitleKey: 'carouselSubtitle6'
-    }
-  ];
-  
-  // Carousel state - simple and smooth
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  
-  
-  // Simple and smooth carousel auto-play
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Fade out
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 400,
-        easing: Easing.ease,
-        useNativeDriver: true,
-      }).start(() => {
-        // Change image
-        setCurrentIndex((prevIndex) => (prevIndex + 1) % carouselData.length);
-        
-        // Fade in
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          easing: Easing.ease,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, 4000); // Change every 4 seconds
-    
-    return () => clearInterval(interval);
-  }, [carouselData.length]);
-  
-  console.log('HomeScreen rendered!', {
-    currentLanguage: language,
-    readyToScanText: t('readyToScan')
-  }); // Debug log
-  
+
+  const openLatest = () => {
+    openProduct(latestProduct);
+  };
+
+  const openCamera = () => {
+    const root = navigation.getParent?.() ?? navigation;
+    root.navigate('Camera');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Section */}
-      <View style={styles.topSection}>
-      </View>
-
-      {/* Carousel Card */}
-      <View style={styles.carouselContainer}>
-        <View style={styles.carouselCard}>
-          {/* Animated Background Image */}
-          <Animated.View style={[styles.carouselBackgroundContainer, { opacity: fadeAnim }]}>
-            <Image 
-              source={carouselImages[carouselData[currentIndex].imageKey]}
-              style={styles.carouselImage}
-              resizeMode="cover"
-            />
-            <View style={styles.carouselOverlay} />
-          </Animated.View>
-          
-          {/* Static UI Elements (No Animation) */}
-          {/* Scanner Icon - Top */}
-          <View style={[styles.scannerIconTop, { top: 60 + offset15Percent }]}>
-            <View style={styles.scannerIconBackground}>
-              <View style={styles.scannerInner}>
-                <View style={styles.scannerCorners}>
-                  <View style={[styles.corner, styles.topLeft]} />
-                  <View style={[styles.corner, styles.topRight]} />
-                  <View style={[styles.corner, styles.bottomLeft]} />
-                  <View style={[styles.corner, styles.bottomRight]} />
-                </View>
-              </View>
-            </View>
+      <WebScroll
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={styles.content}
+      >
+        <View style={styles.brandRow}>
+          <Text style={styles.brand}>SCANA</Text>
+          <View style={styles.beta}>
+            <Text style={styles.betaText}>{t('beta')}</Text>
           </View>
-
-          {/* Text Content - Below Scanner */}
-          <View style={[styles.textContent, { top: 180 + offset15Percent }]}>
-            <Text style={styles.carouselTitle}>{t(carouselData[currentIndex].titleKey)}</Text>
-            <Text style={styles.carouselSubtitle}>{t(carouselData[currentIndex].subtitleKey)}</Text>
-          </View>
-
         </View>
-      </View>
+        <Text style={styles.searchHint}>{t('searchHint')}</Text>
 
+        <View style={styles.searchBox}>
+          <MaterialIcons name="search" size={22} color={colors.muted} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('searchPlaceholder')}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+        </View>
 
+        {searching ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('results')}</Text>
+            {results.length === 0 ? (
+              <Text style={styles.emptySearch}>{t('noSearchResults')}</Text>
+            ) : (
+              results.map((item) => (
+                <Tap
+                  key={item.id}
+                  style={styles.resultRow}
+                  onPress={() => openProduct(item)}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.name}
+                >
+                  <Image source={item.image} style={styles.resultImage} />
+                  <View style={styles.resultText}>
+                    <Text style={styles.resultName}>{item.name}</Text>
+                    <Text style={styles.resultPrice}>{item.price}</Text>
+                  </View>
+                  <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+                </Tap>
+              ))
+            )}
+          </>
+        ) : latest ? (
+          <>
+            <Text style={styles.sectionLabel}>{t('lastScan')}</Text>
+            <Tap
+              style={styles.latestCard}
+              onPress={openLatest}
+              accessibilityRole="button"
+              accessibilityLabel={latest.productName}
+            >
+              <View style={styles.latestThumb}>
+                {latest.photoUri ? (
+                  <Image source={{ uri: latest.photoUri }} style={styles.latestImage} />
+                ) : latestProduct?.image ? (
+                  <Image source={latestProduct.image} style={styles.latestImage} />
+                ) : (
+                  <MaterialIcons name="photo-camera" size={26} color={colors.muted} />
+                )}
+              </View>
+              <View style={styles.latestBody}>
+                <Text style={styles.latestName} numberOfLines={2}>
+                  {latest.productName}
+                </Text>
+                <Text style={styles.latestPrice}>{latest.price}</Text>
+                {latest.date ? <Text style={styles.latestDate}>{latest.date}</Text> : null}
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color={colors.muted} />
+            </Tap>
+          </>
+        ) : (
+          <View style={styles.emptyCard}>
+            <MaterialIcons name="photo-camera" size={36} color={colors.muted} />
+            <Text style={styles.emptyTitle}>{t('lastScan')}</Text>
+            <Text style={styles.emptyText}>{t('scanToSeeLatest')}</Text>
+            <Tap
+              style={styles.scanButton}
+              onPress={openCamera}
+              accessibilityRole="button"
+              accessibilityLabel={t('scanNow')}
+            >
+              <Text style={styles.scanButtonText}>{t('scanNow')}</Text>
+            </Tap>
+          </View>
+        )}
+
+        <Text style={styles.disclaimer}>
+          {t('priceDisclaimer')} {t('pricesChecked')} {PRICES_UPDATED}.
+        </Text>
+      </WebScroll>
     </SafeAreaView>
   );
 }
@@ -153,141 +161,179 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  topLabel: {
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 36,
+    paddingBottom: 32,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  brand: {
+    color: colors.text,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 4,
+  },
+  beta: {
+    backgroundColor: 'rgba(59, 110, 246, 0.2)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  betaText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  searchHint: {
+    color: colors.muted,
+    fontSize: 15,
+    marginBottom: 22,
+    lineHeight: 22,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.card,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    marginBottom: 20,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.text,
+    paddingVertical: 14,
+    fontSize: 16,
+  },
+  sectionLabel: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    paddingVertical: 12,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+  },
+  resultImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: colors.card,
+  },
+  resultText: {
+    flex: 1,
+  },
+  resultName: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  resultPrice: {
+    color: colors.primary,
+    fontSize: 13,
+    marginTop: 2,
+  },
+  emptySearch: {
+    color: colors.muted,
+    paddingVertical: 14,
+    fontSize: 13,
+  },
+  latestCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    padding: 14,
+  },
+  latestThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  latestImage: {
+    width: 64,
+    height: 64,
+  },
+  latestBody: {
+    flex: 1,
+  },
+  latestName: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  latestPrice: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  latestDate: {
+    color: colors.muted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptyText: {
     color: colors.muted,
     fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  carouselContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: -100,
-    width: '100%',
-    height: '120%',
-  },
-  carouselCard: {
-    height: '100%',
-    borderRadius: 0,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  carouselBackgroundContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '120%',
-  },
-  carouselImage: {
-    width: '100%',
-    height: '100%',
-  },
-  carouselOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    height: '120%',
-  },
-  carouselContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-    position: 'relative',
-    zIndex: 2,
-  },
-  scannerIconTop: {
-    position: 'absolute',
-    top: 60,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 3,
-  },
-  scannerIconBackground: {
-    width: 100,
-    height: 100,
+  scanButton: {
+    marginTop: 8,
     backgroundColor: colors.primary,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
   },
-  textContent: {
-    position: 'absolute',
-    top: 180,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 3,
+  scanButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
-  carouselTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 16,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  carouselSubtitle: {
-    fontSize: 18,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 24,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  scannerInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scannerCorners: {
-    width: 50,
-    height: 50,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    borderColor: colors.text,
-    borderWidth: 3,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
+  disclaimer: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 24,
   },
 });
-

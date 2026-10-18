@@ -1,91 +1,105 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../theme/colors';
+import { useLanguage } from '../../store/LanguageContext';
+import { useAuth } from '../../store/useAuth';
+
+function notify(title, message) {
+  if (Platform.OS === 'web') {
+    window.alert(message ? `${title}\n\n${message}` : title);
+    return;
+  }
+  Alert.alert(title, message);
+}
 
 export default function ForgotPasswordScreen({ navigation }) {
+  const { t } = useLanguage();
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleSendCode = () => {
-    Alert.alert('Kode sendt til email', 'Check your email for the reset code');
-  };
+  const handleReset = async () => {
+    if (!email.trim() || !password) {
+      notify(t('error'), t('fillAllFields'));
+      return;
+    }
+    if (password.length < 6) {
+      notify(t('error'), t('passwordTooShort'));
+      return;
+    }
 
-  const handleSocialLogin = (provider) => {
-    console.log(`${provider} login pressed`);
+    setBusy(true);
+    try {
+      await resetPassword(email, password);
+      notify(t('passwordReset'), t('passwordResetHintDone'));
+      navigation.navigate('Login');
+    } catch (error) {
+      notify(t('error'), error?.code === 'account_not_found' ? t('accountNotFound') : t('loginFailed'));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.topSection}>
-        <Text style={styles.topLabel}>Glemt Kodeord</Text>
-      </View>
-      
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.mainCard}>
-          {/* Scanner Icon */}
-          <View style={styles.scannerIcon}>
-            <View style={styles.scannerInner}>
-              <View style={styles.scannerCorners}>
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-              </View>
-            </View>
-          </View>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity
+          style={styles.back}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('back')}
+        >
+          <MaterialIcons name="arrow-back" size={22} color={colors.text} />
+          <Text style={styles.backText}>{t('back')}</Text>
+        </TouchableOpacity>
 
-          {/* Title */}
-          <Text style={styles.title}>Glemt Kodeord?</Text>
-          <Text style={styles.subtitle}>Forgot your password? Enter your email and receive a new one!</Text>
+        <Text style={styles.title}>{t('forgotPassword')}</Text>
+        <Text style={styles.subtitle}>{t('resetPasswordHint')}</Text>
 
-          {/* Social Login Section */}
-          <View style={styles.socialSection}>
-            <Text style={styles.socialLabel}>Hurtig oprettelse</Text>
-            <View style={styles.socialButtons}>
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('Google')}
-              >
-                <Text style={styles.socialIcon}>G</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('Facebook')}
-              >
-                <Text style={styles.socialIcon}>f</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialLogin('Apple')}
-              >
-                <Ionicons name="logo-apple" size={20} color={colors.muted} />
-              </TouchableOpacity>
-            </View>
-          </View>
+        <TextInput
+          style={styles.input}
+          placeholder={t('email')}
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+        <TextInput
+          style={styles.input}
+          placeholder={t('newPassword')}
+          placeholderTextColor="rgba(255,255,255,0.4)"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
 
-          {/* Email Field */}
-          <View style={styles.formSection}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.muted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* Send Button */}
-          <TouchableOpacity 
-            style={styles.sendButton}
-            onPress={handleSendCode}
-          >
-            <Text style={styles.sendButtonText}>Send ny kode</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleReset}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel={t('resetPassword')}
+        >
+          {busy ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.primaryText}>{t('resetPassword')}</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -96,141 +110,55 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
-  topLabel: {
-    color: colors.muted,
-    fontSize: 14,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  mainCard: {
-    backgroundColor: colors.card,
-    marginHorizontal: 20,
-    marginVertical: 20,
-    borderRadius: 16,
-    padding: 24,
+  back: {
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 28,
   },
-  scannerIcon: {
-    width: 80,
-    height: 80,
-    backgroundColor: colors.text,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  scannerInner: {
-    width: 40,
-    height: 40,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scannerCorners: {
-    width: 40,
-    height: 40,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderColor: colors.text,
-    borderWidth: 2,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
+  backText: {
+    color: colors.text,
+    fontSize: 16,
+    marginLeft: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
     color: colors.text,
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '800',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
     color: colors.muted,
-    textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 15,
     lineHeight: 22,
-  },
-  socialSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  socialLabel: {
-    fontSize: 14,
-    color: colors.muted,
-    marginBottom: 12,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  socialButton: {
-    width: 50,
-    height: 50,
-    backgroundColor: colors.text,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  socialIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.muted,
-  },
-  formSection: {
-    width: '100%',
     marginBottom: 24,
   },
   input: {
-    backgroundColor: colors.text,
-    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: colors.bg,
-  },
-  sendButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 12,
-    minWidth: 160,
-    alignItems: 'center',
-  },
-  sendButtonText: {
     color: colors.text,
+    marginBottom: 10,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  primaryText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

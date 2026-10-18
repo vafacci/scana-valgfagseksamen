@@ -42,6 +42,7 @@ export function useScanHistory() {
       date: new Date().toLocaleDateString('da-DK'),
       timestamp: new Date().toISOString(),
       photoUri: scanData.photoUri,
+      productId: scanData.productId || null,
     };
     
     const newHistory = [newScan, ...scanHistory].slice(0, 20); // Keep only last 20 scans

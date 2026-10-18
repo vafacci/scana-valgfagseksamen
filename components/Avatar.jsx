@@ -3,11 +3,14 @@ import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors } from '../theme/colors';
 
 export default function Avatar({ name, subtitle, size = 60, imageUrl }) {
-  const initials = name
-    .split(' ')
-    .map(word => word[0])
-    .join('')
-    .toUpperCase();
+  const initials =
+    (name || '')
+      .split(' ')
+      .filter(Boolean)
+      .map((word) => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?';
 
   return (
     <View style={styles.container}>
@@ -25,7 +28,7 @@ export default function Avatar({ name, subtitle, size = 60, imageUrl }) {
         )}
       </View>
       <View style={styles.textContainer}>
-        <Text style={styles.name}>{name}</Text>
+        <Text style={styles.name}>{name || '—'}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
     </View>

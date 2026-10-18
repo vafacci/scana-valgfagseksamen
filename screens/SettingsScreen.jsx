@@ -1,152 +1,183 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, SafeAreaView, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
+import AppModal from '../components/AppModal';
+import WebScroll from '../components/WebScroll';
+import Tap from '../components/Tap';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { useAuth } from '../store/useAuth';
 import { useLanguage } from '../store/LanguageContext';
-import GradientButton from '../components/GradientButton';
+import { useScanHistory } from '../store/useScanHistory';
+import { useFavorites } from '../store/useFavorites';
+import { useUserProfile } from '../store/useUserProfile';
+import { useAuth } from '../store/useAuth';
 import LanguageSettingsScreen from './LanguageSettingsScreen';
+import EditProfileScreen from './EditProfileScreen';
 
-export default function SettingsScreen({ navigation, visible, onClose }) {
-  // Determine if this is being used as a modal or regular screen
+function SettingsRow({ icon, label, onPress, destructive }) {
+  return (
+    <Tap
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <MaterialIcons
+        name={icon}
+        size={22}
+        color={destructive ? '#FF3B30' : colors.muted}
+      />
+      <Text style={[styles.rowLabel, destructive && styles.rowDestructive]}>{label}</Text>
+      <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
+    </Tap>
+  );
+}
+
+export default function SettingsScreen({ visible, onClose, navigation }) {
   const isModal = visible !== undefined;
-  const { logout } = useAuth();
   const { t } = useLanguage();
+  const { clearHistory } = useScanHistory();
+  const { clearFavorites } = useFavorites();
+  const { resetProfile } = useUserProfile();
+  const { logout } = useAuth();
   const [languageSettingsVisible, setLanguageSettingsVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
 
-  const handleLogout = async () => {
-    await logout();
-    if (isModal && onClose) {
-      onClose();
+  const openLegal = (type) => {
+    if (isModal && onClose) onClose();
+    const root = navigation?.getParent?.() ?? navigation;
+    root?.navigate('Legal', { type });
+  };
+
+  const handleClearData = () => {
+    const run = async () => {
+      await Promise.all([clearHistory(), clearFavorites(), resetProfile()]);
+      if (Platform.OS === 'web') {
+        window.alert(t('dataCleared'));
+        return;
+      }
+      Alert.alert(t('dataCleared'));
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${t('clearLocalData')}\n\n${t('clearLocalDataHint')}`)) {
+        run();
+      }
+      return;
     }
+
+    Alert.alert(t('clearLocalData'), t('clearLocalDataHint'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: run },
+    ]);
   };
 
-  const handleAddUser = () => {
-    console.log('Add new user pressed');
-    // TODO: Navigate to add user screen
+  const handleLogout = () => {
+    const run = () => logout();
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(t('logout'))) {
+        run();
+      }
+      return;
+    }
+
+    Alert.alert(t('logout'), t('logoutHint'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('logout'), style: 'destructive', onPress: run },
+    ]);
   };
 
-  const handleDeleteProfile = () => {
-    console.log('Delete profile pressed');
-    // TODO: Implement delete profile functionality
-  };
+  const rows = [
+    { icon: 'person-outline', label: t('editProfile'), onPress: () => setEditProfileVisible(true) },
+    { icon: 'language', label: t('language'), onPress: () => setLanguageSettingsVisible(true) },
+    { icon: 'lock-outline', label: t('privacy'), onPress: () => openLegal('privacy') },
+    { icon: 'gavel', label: t('terms'), onPress: () => openLegal('terms') },
+    { icon: 'sell', label: t('aboutPrices'), onPress: () => openLegal('prices') },
+  ];
 
-  const handleLanguageSettings = () => {
-    setLanguageSettingsVisible(true);
-  };
-
-  const renderModalContent = () => (
-    <View style={styles.modalContent}>
-      {/* Header with Back Button */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={onClose}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-          <Text style={styles.backText}>{t('back')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Title */}
-      <View style={styles.titleContainer}>
+  const body = (
+    <>
+      <View style={[styles.header, isModal && styles.modalHeader]}>
+        {isModal ? (
+          <Tap style={styles.backButton} onPress={onClose}>
+            <MaterialIcons name="arrow-back" size={22} color={colors.text} />
+            <Text style={styles.backText}>{t('back')}</Text>
+          </Tap>
+        ) : null}
         <Text style={styles.title}>{t('settings')}</Text>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.buttonsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
-          <Text style={styles.buttonText}>{t('logout')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={handleAddUser}>
-          <Text style={styles.buttonText}>{t('addNewUser')}</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.actionButton} onPress={handleDeleteProfile}>
-          <Text style={[styles.buttonText, styles.deleteText]}>{t('deleteProfile')}</Text>
-        </TouchableOpacity>
+      <View style={styles.group}>
+        {rows.map((row) => (
+          <SettingsRow key={row.label} {...row} />
+        ))}
       </View>
-    </View>
+
+      <View style={styles.group}>
+        <SettingsRow
+          icon="logout"
+          label={t('logout')}
+          onPress={handleLogout}
+        />
+        <SettingsRow
+          icon="delete-outline"
+          label={t('clearLocalData')}
+          onPress={handleClearData}
+          destructive
+        />
+      </View>
+    </>
   );
 
-  const renderScreenContent = () => (
-    <ScrollView 
-      style={styles.scrollView} 
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      bounces={true}
-    >
-      {/* Large Heading */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{t('settings')}</Text>
-      </View>
-
-      {/* Five Gradient Buttons */}
-      <View style={styles.buttonsContainer}>
-        <GradientButton 
-          title={t('profileSettings')} 
-          onPress={() => console.log('Profile settings pressed')}
+  const extras = (
+    <>
+      {languageSettingsVisible ? (
+        <LanguageSettingsScreen
+          visible
+          onClose={() => setLanguageSettingsVisible(false)}
         />
-        <GradientButton 
-          title={t('notifications')} 
-          onPress={() => console.log('Notifications pressed')}
+      ) : null}
+      {editProfileVisible ? (
+        <EditProfileScreen
+          visible
+          onClose={() => setEditProfileVisible(false)}
         />
-        <GradientButton 
-          title={t('languageAndTheme')} 
-          onPress={handleLanguageSettings}
-        />
-        <GradientButton 
-          title={t('privacyAndSecurity')} 
-          onPress={() => console.log('Privacy and security pressed')}
-        />
-        <GradientButton 
-          title={t('account')} 
-          onPress={() => console.log('Account pressed')}
-        />
-      </View>
-
-      {/* Text Links */}
-      <View style={styles.linksContainer}>
-        <TouchableOpacity onPress={handleAddUser}>
-          <Text style={styles.linkText}>{t('addNewUserLink')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.linkText}>{t('logoutLink')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleDeleteProfile}>
-          <Text style={[styles.linkText, styles.deleteText]}>{t('deleteProfileLink')}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      ) : null}
+    </>
   );
 
   if (isModal) {
     return (
-      <Modal
-        visible={visible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalOverlay}>
-          {renderModalContent()}
-        </View>
-      </Modal>
+      <>
+        <AppModal
+          visible={visible}
+          transparent
+          animationType="slide"
+          onRequestClose={onClose}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <WebScroll showsVerticalScrollIndicator={false}>
+                {body}
+              </WebScroll>
+            </View>
+          </View>
+        </AppModal>
+        {extras}
+      </>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.screenWrapper}>
-        {renderScreenContent()}
-      </View>
-      
-      {/* Language Settings Modal */}
-      <LanguageSettingsScreen 
-        visible={languageSettingsVisible}
-        onClose={() => setLanguageSettingsVisible(false)}
-      />
+      <WebScroll
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {body}
+      </WebScroll>
+      {extras}
     </SafeAreaView>
   );
 }
@@ -156,12 +187,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  screenWrapper: {
+  scrollView: {
     flex: 1,
   },
-  topLabel: {
-    color: colors.muted,
-    fontSize: 14,
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 32,
   },
   modalOverlay: {
     flex: 1,
@@ -172,87 +203,59 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingTop: 20,
     paddingBottom: 40,
-    minHeight: '60%',
-  },
-  screenContent: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingTop: 20,
-    paddingBottom: 40,
+    minHeight: '70%',
   },
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: 48,
     paddingBottom: 20,
+  },
+  modalHeader: {
+    paddingTop: 20,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
   },
   backText: {
     color: colors.text,
     fontSize: 16,
     marginLeft: 8,
   },
-  titleContainer: {
-    alignItems: 'center',
-    paddingBottom: 40,
-  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.text,
   },
-  buttonsContainer: {
-    paddingHorizontal: 20,
-    gap: 16,
-    marginTop: 30,
+  group: {
+    marginHorizontal: 24,
+    marginBottom: 16,
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    overflow: 'hidden',
   },
-  actionButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'stretch',
+    width: '100%',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
-  buttonText: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  deleteText: {
-    color: '#FF4444', // Red color for delete action
-  },
-  scrollView: {
+  rowLabel: {
     flex: 1,
-    paddingTop: 30,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 100, // Extra space for navigation bar
-  },
-  linksContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 40,
-    marginTop: 40,
-  },
-  linkText: {
-    fontSize: 16,
-    color: colors.muted,
-    marginBottom: 12,
-    textDecorationLine: 'underline',
-    textAlign: 'center',
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    marginBottom: 20,
-  },
-  footerText: {
-    fontSize: 16,
     color: colors.text,
-    textAlign: 'center',
-    lineHeight: 22,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  rowDestructive: {
+    color: '#FF3B30',
   },
 });

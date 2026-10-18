@@ -1,0 +1,26 @@
+{
+  "short_name": "Scana",
+  "name": "Scana — sammenlign priser",
+  "description": "Søg og sammenlign vejledende priser fra danske elektronikbutikker.",
+  "icons": [
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#3B6EF6",
+  "background_color": "#0F1B2B",
+  "lang": "da"
+}

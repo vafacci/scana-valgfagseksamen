@@ -1,345 +1,206 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Image, FlatList, ScrollView, Animated } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Image,
+  Linking,
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
+import { useLanguage } from '../store/LanguageContext';
 import OfferListItem from '../components/OfferListItem';
+import Tap from '../components/Tap';
+import WebScroll from '../components/WebScroll';
 import { useFavorites } from '../store/useFavorites';
-import priceData from '../data/prices.json';
+import {
+  findProductByName,
+  offerUrl,
+  sortOffers,
+  getLowestPrice,
+  formatPrice,
+  PRICES_UPDATED,
+} from '../data/catalog';
+
+const FILTERS = [
+  { id: 'billigste', icon: 'sell', labelKey: 'filterCheapest' },
+  { id: 'hurtigste', icon: 'schedule', labelKey: 'filterFastest' },
+  { id: 'anbefalet', icon: 'thumb-up', labelKey: 'filterRecommended' },
+];
+
+const SORT_HINTS = {
+  billigste: 'sortByPrice',
+  hurtigste: 'sortByDelivery',
+  anbefalet: 'sortByRecommended',
+};
+
+const BADGE_FOR_FILTER = {
+  billigste: 'cheapest',
+  hurtigste: 'fastest',
+  anbefalet: 'recommended',
+};
+
+const EMPTY_OFFERS = [];
+
+function imageSource(image) {
+  if (!image) return null;
+  return typeof image === 'string' ? { uri: image } : image;
+}
 
 export default function ResultsScreen({ navigation, route }) {
   const { product, barcode, productName, photoUri } = route.params || {};
+  const { t } = useLanguage();
   const { toggleFavorite, isFavorite } = useFavorites();
-  
-  // Filter state
   const [activeFilter, setActiveFilter] = useState('billigste');
-  
-  // Animation values for recommended products
-  const cardAnimations = useRef([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]).current;
-  
-  const pulseAnimations = useRef([
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]).current;
-  
-  // Animation values for filter buttons
-  const filterAnimations = useRef([
-    new Animated.Value(0),
-    new Animated.Value(0),
-    new Animated.Value(0),
-  ]).current;
-  
-  const filterPulseAnimations = useRef([
-    new Animated.Value(1),
-    new Animated.Value(1),
-    new Animated.Value(1),
-  ]).current;
-  
-  // Start animations on mount
-  useEffect(() => {
-    // Staggered entrance animations for recommended cards
-    const cardAnimationsSequence = Animated.stagger(200, 
-      cardAnimations.map(anim => 
-        Animated.spring(anim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        })
-      )
-    );
-    
-    // Staggered entrance animations for filter buttons
-    const filterAnimationsSequence = Animated.stagger(150,
-      filterAnimations.map(anim =>
-        Animated.spring(anim, {
-          toValue: 1,
-          tension: 120,
-          friction: 7,
-          useNativeDriver: true,
-        })
-      )
-    );
-    
-    // Start entrance animations
-    Animated.parallel([
-      cardAnimationsSequence,
-      filterAnimationsSequence,
-    ]).start();
-    
-    // Subtle pulse animations for recommended cards
-    pulseAnimations.forEach((anim, index) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1.05,
-            duration: 2000 + (index * 500),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 2000 + (index * 500),
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
-    
-    // Subtle pulse animations for filter buttons
-    filterPulseAnimations.forEach((anim, index) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 1.02,
-            duration: 3000 + (index * 300),
-            useNativeDriver: true,
-          }),
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 3000 + (index * 300),
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    });
-  }, []);
-  
-  // Use product data from barcode scan or fallback to mock data
-  const productData = product || {
-    name: productName || 'Apple AirPods Pro (2nd Gen)',
-    price: '1,899 kr',
-    category: 'Electronics',
-    description: 'Active noise cancellation with Adaptive Transparency',
-    image: photoUri || 'https://store.storeimages.cdn-apple.com/4668/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361'
-  };
-  
-  // Find the product in our mock data for price comparison
-  const priceComparison = priceData.find(item => 
-    item.name === productData.name || item.name === 'Apple AirPods Pro (2nd Gen)'
-  );
-  
-  // Sort offers based on active filter
-  const sortedOffers = priceComparison?.offers.sort((a, b) => {
-    switch (activeFilter) {
-      case 'billigste':
-        return a.price - b.price;
-      case 'hurtigste':
-        return parseInt(a.eta) - parseInt(b.eta);
-      case 'anbefalet':
-        // Anbefalingsscore: rating først, derefter laveste pris (fallback)
-        const ratingDiff = parseFloat(b.rating) - parseFloat(a.rating);
-        if (ratingDiff !== 0) return ratingDiff;
-        // Hvis rating er ens, sortér efter laveste pris
-        return a.price - b.price;
-      default:
-        return a.price - b.price;
-    }
-  }) || [];
 
-  const renderOfferItem = ({ item }) => {
-    const favorite = isFavorite(item);
-    
-    return (
-      <View style={styles.offerCard}>
-        <View style={styles.offerLeft}>
-          <Text style={styles.storeName}>{item.store}</Text>
-          
-          <Text style={styles.price}>{item.price}kr,-</Text>
-          
-          <View style={styles.detailsRow}>
-            <Text style={styles.shipping}>Fragt: {item.shipping}</Text>
-            <Text style={styles.eta}>{item.eta}</Text>
-            <Text style={styles.rating}>✰ {item.rating}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.offerRight}>
-          <TouchableOpacity 
-            style={styles.heartButton}
-            onPress={() => toggleFavorite({ ...item, productName })}
-          >
-            <Text style={[styles.heartIcon, favorite && styles.heartFilled]}>
-              {favorite ? '❤️' : '♡'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.storeButton}>
-            <Text style={styles.storeButtonText}>Gå til butik</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+  const catalogProduct = findProductByName(product?.name || productName);
+  const displayName = catalogProduct?.name || product?.name || productName || t('unknownProduct');
+  const displayImage = catalogProduct?.image || product?.image || photoUri || null;
+  const displayCategory = catalogProduct?.category || product?.category || '';
+  const offers = (product?.offers?.length ? product.offers : catalogProduct?.offers) || EMPTY_OFFERS;
+
+  const sortedOffers = useMemo(
+    () => sortOffers(offers, activeFilter),
+    [offers, activeFilter]
+  );
+
+  const lowestPrice = getLowestPrice(offers);
+
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Tabs');
+    }
+  };
+
+  const openStore = (offer) => {
+    Linking.openURL(offerUrl(offer, displayName));
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Top Section - Fixed */}
       <View style={styles.topSection}>
-        <TouchableOpacity onPress={() => navigation.navigate('Tabs')}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
+        <Tap
+          onPress={goBack}
+          accessibilityRole="button"
+          accessibilityLabel={t('back')}
+          style={styles.backButton}
+        >
+          <MaterialIcons name="arrow-back" size={24} color={colors.text} />
+        </Tap>
       </View>
 
-      {/* Anbefalede Produkter - FIXED AT THE TOP */}
-      <View style={styles.recommendedContainer}>
-        <Text style={styles.sectionTitle}>Anbefalede Produkter</Text>
-        <View style={styles.recommendedGrid}>
-          <Animated.View style={[
-            styles.recommendedCard,
-            {
-              transform: [
-                { scale: cardAnimations[0] },
-                { scale: pulseAnimations[0] }
-              ]
-            }
-          ]}>
-            <Image 
-              source={require('../assets/airpods-pro.jpeg')} 
-              style={styles.recommendedImage}
+      <View style={styles.productInfo}>
+        <View style={styles.productHeader}>
+          <View style={styles.productTextInfo}>
+            <Text style={styles.productName}>{displayName}</Text>
+            {displayCategory ? (
+              <Text style={styles.productCategory}>{displayCategory}</Text>
+            ) : null}
+            {lowestPrice != null ? (
+              <Text style={styles.lowestPrice}>
+                {t('fromPrice')} {formatPrice(lowestPrice)}
+                {offers.length > 0 ? `  ·  ${offers.length} ${t('offers')}` : ''}
+              </Text>
+            ) : null}
+            <Text style={styles.checked}>
+              {t('pricesChecked')} {PRICES_UPDATED}
+            </Text>
+            {barcode ? (
+              <Text style={styles.barcodeInfo}>{t('barcode')}: {barcode}</Text>
+            ) : null}
+          </View>
+          {imageSource(displayImage) ? (
+            <Image
+              source={imageSource(displayImage)}
+              style={styles.productImage}
               resizeMode="cover"
             />
-            <Text style={styles.recommendedName}>Apple AirPods Pro</Text>
-            <Text style={styles.recommendedPrice}>1,899 kr</Text>
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedButtonText}>Se tilbud</Text>
-            </TouchableOpacity>
-          </Animated.View>
-          
-          <Animated.View style={[
-            styles.recommendedCard,
-            {
-              transform: [
-                { scale: cardAnimations[1] },
-                { scale: pulseAnimations[1] }
-              ]
-            }
-          ]}>
-            <Image 
-              source={require('../assets/sony-wh.webp')} 
-              style={styles.recommendedImage}
-              resizeMode="cover"
-            />
-            <Text style={styles.recommendedName}>Sony WH-1000XM5</Text>
-            <Text style={styles.recommendedPrice}>2,799 kr</Text>
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedButtonText}>Se tilbud</Text>
-            </TouchableOpacity>
-          </Animated.View>
-          
-          <Animated.View style={[
-            styles.recommendedCard,
-            {
-              transform: [
-                { scale: cardAnimations[2] },
-                { scale: pulseAnimations[2] }
-              ]
-            }
-          ]}>
-            <Image 
-              source={require('../assets/bose.jpg')} 
-              style={styles.recommendedImage}
-              resizeMode="cover"
-            />
-            <Text style={styles.recommendedName}>Bose QuietComfort</Text>
-            <Text style={styles.recommendedPrice}>3,199 kr</Text>
-            <TouchableOpacity style={styles.recommendedButton}>
-              <Text style={styles.recommendedButtonText}>Se tilbud</Text>
-            </TouchableOpacity>
-          </Animated.View>
+          ) : (
+            <View style={[styles.productImage, styles.imageFallback]}>
+              <MaterialIcons name="inventory-2" size={36} color={colors.muted} />
+            </View>
+          )}
         </View>
       </View>
 
-      {/* Filter Bar */}
-      <View style={styles.filterContainer}>
-        <TouchableOpacity 
-          style={[styles.filterTab, activeFilter === 'billigste' && styles.filterTabActive]}
-          onPress={() => setActiveFilter('billigste')}
-          accessibilityLabel="Billigste"
-          accessibilityRole="button"
-          accessibilityState={{ selected: activeFilter === 'billigste' }}
-        >
-          <Text style={[styles.filterText, activeFilter === 'billigste' && styles.filterTextActive]}>
-            Billigste
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.filterTab, activeFilter === 'hurtigste' && styles.filterTabActive]}
-          onPress={() => setActiveFilter('hurtigste')}
-          accessibilityLabel="Hurtigste"
-          accessibilityRole="button"
-          accessibilityState={{ selected: activeFilter === 'hurtigste' }}
-        >
-          <Text style={[styles.filterText, activeFilter === 'hurtigste' && styles.filterTextActive]}>
-            Hurtigste
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.filterTab, activeFilter === 'anbefalet' && styles.filterTabActive]}
-          onPress={() => setActiveFilter('anbefalet')}
-          accessibilityLabel="Anbefalet"
-          accessibilityRole="button"
-          accessibilityState={{ selected: activeFilter === 'anbefalet' }}
-        >
-          <Text style={[styles.filterText, activeFilter === 'anbefalet' && styles.filterTextActive]}>
-            Anbefalet
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Scrollable Content */}
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.scrollContent}>
-          {/* Product Info */}
-          <View style={styles.productInfo}>
-            <View style={styles.productHeader}>
-              <View style={styles.productTextInfo}>
-                <Text style={styles.productName}>{productData.name}</Text>
-                <Text style={styles.productCategory}>{productData.category}</Text>
-                <Text style={styles.productDescription}>{productData.description}</Text>
-                {barcode && (
-                  <Text style={styles.barcodeInfo}>Barcode: {barcode}</Text>
-                )}
-              </View>
-              <Image 
-                source={typeof productData.image === 'string' ? { uri: productData.image } : productData.image} 
-                style={styles.productImage}
-                resizeMode="cover"
-              />
-            </View>
+      {offers.length > 0 ? (
+        <View style={styles.filterSection}>
+          <View style={styles.filterContainer}>
+            {FILTERS.map((filter) => {
+              const selected = activeFilter === filter.id;
+              return (
+                <Tap
+                  key={filter.id}
+                  style={[styles.filterTab, selected && styles.filterTabActive]}
+                  onPress={() => setActiveFilter(filter.id)}
+                  accessibilityLabel={t(filter.labelKey)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <MaterialIcons
+                    name={filter.icon}
+                    size={16}
+                    color={selected ? colors.text : colors.muted}
+                  />
+                  <Text
+                    style={[styles.filterText, selected && styles.filterTextActive]}
+                    numberOfLines={1}
+                  >
+                    {t(filter.labelKey)}
+                  </Text>
+                </Tap>
+              );
+            })}
           </View>
+          <Text style={styles.sortHint}>{t(SORT_HINTS[activeFilter])}</Text>
+        </View>
+      ) : null}
 
-          {/* Price List */}
+      <WebScroll
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {sortedOffers.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="storefront" size={48} color={colors.muted} />
+            <Text style={styles.emptyTitle}>{t('noOffers')}</Text>
+            <Text style={styles.emptyHint}>{t('noOffersHint')}</Text>
+          </View>
+        ) : (
           <View style={styles.priceListContainer}>
             {sortedOffers.map((item, index) => {
-              const favorite = isFavorite({ ...item, productName: productData.name });
+              const favorite = isFavorite({ ...item, productName: displayName });
               return (
                 <OfferListItem
-                  key={index}
+                  key={`${item.store}-${item.price}`}
                   store={item.store}
                   price={item.price}
                   shipping={item.shipping}
                   eta={item.eta}
                   rating={item.rating}
                   favorite={favorite}
-                  onToggleFavorite={() => toggleFavorite({ 
-                    ...item, 
-                    productName: productData.name,
-                    productImage: productData.image,
-                    category: productData.category,
-                    description: productData.description
+                  isLowest={lowestPrice != null && item.price === lowestPrice}
+                  badgeType={index === 0 ? BADGE_FOR_FILTER[activeFilter] : null}
+                  onToggleFavorite={() => toggleFavorite({
+                    ...item,
+                    productName: displayName,
+                    productImage: displayImage,
+                    category: displayCategory,
+                    description: catalogProduct?.description || product?.description || '',
                   })}
-                  onPressStore={() => {}}
+                  onPressStore={() => openStore(item)}
                 />
               );
             })}
           </View>
-        </View>
-      </ScrollView>
+        )}
+        <Text style={styles.disclaimer}>{t('priceDisclaimer')}</Text>
+        <Text style={styles.opensHint}>{t('opensSearchHint')}</Text>
+      </WebScroll>
     </SafeAreaView>
   );
 }
@@ -352,37 +213,16 @@ const styles = StyleSheet.create({
   topSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingTop: 10,
   },
-  backArrow: {
-    color: colors.text,
-    fontSize: 24,
-    marginRight: 16,
-  },
-  topLabel: {
-    color: colors.muted,
-    fontSize: 14,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.muted,
-    lineHeight: 22,
+  backButton: {
+    padding: 4,
   },
   productInfo: {
     paddingHorizontal: 20,
-    marginBottom: 20,
-    marginTop: 20,
+    marginBottom: 8,
+    marginTop: 8,
   },
   productHeader: {
     flexDirection: 'row',
@@ -394,21 +234,26 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   productCategory: {
-    fontSize: 14,
-    color: colors.primary,
+    fontSize: 13,
+    color: colors.muted,
     fontWeight: '500',
     marginBottom: 8,
   },
-  productDescription: {
-    fontSize: 14,
+  lowestPrice: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.primary,
+    marginBottom: 6,
+  },
+  checked: {
+    fontSize: 12,
     color: colors.muted,
-    lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   barcodeInfo: {
     fontSize: 12,
@@ -416,242 +261,104 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
   productImage: {
-    width: 100,
-    height: 100,
+    width: 96,
+    height: 96,
     borderRadius: 12,
     backgroundColor: colors.card,
   },
-  priceListContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 16,
-  },
-  listContent: {
-    paddingBottom: 20,
-  },
-  offerCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    padding: 16,
-    minHeight: 140,
-  },
-  offerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  offerContentWrapper: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 12,
-  },
-  offerLeftContent: {
-    flex: 1,
-  },
-  offerActions: {
-    alignSelf: 'flex-end',
-    minWidth: 120,
-    maxWidth: 160,
-  },
-  heartButtonHeader: {
-    padding: 8,
-    marginTop: -4,
-  },
-  heartIconHeader: {
-    fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.9)',
-    width: 24,
-    height: 24,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  storeName: {
-    fontSize: 17,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '600',
-    lineHeight: 22,
-    flex: 1,
-  },
-  heartButton: {
-    padding: 8,
-  },
-  heartIcon: {
-    fontSize: 16,
-    color: colors.muted,
-    width: 20,
-    height: 20,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  heartFilled: {
-    color: '#FF3B30',
-  },
-  priceSection: {
-    marginBottom: 4,
-  },
-  price: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'rgba(255, 255, 255, 1)',
-    marginBottom: 8,
-    lineHeight: 30,
-  },
-  detailsSection: {
-    marginBottom: 6,
-  },
-  shipping: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 2,
-    lineHeight: 19,
-  },
-  eta: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    marginBottom: 2,
-    lineHeight: 19,
-  },
-  rating: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 19,
-  },
-  storeButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-    minHeight: 44,
+  imageFallback: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-  storeButtonText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 20,
-  },
-  recommendedContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    marginBottom: 20,
+  filterSection: {
+    paddingBottom: 4,
   },
   filterContainer: {
     backgroundColor: colors.bg,
     flexDirection: 'row',
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 12,
+    paddingVertical: 8,
+    gap: 8,
     alignItems: 'center',
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 0,
-  },
-  recommendedGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-  },
-  recommendedCard: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 10,
-    width: '30%',
-    alignItems: 'center',
-    height: 180,
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  recommendedImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: colors.bg,
-  },
-  recommendedName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  recommendedPrice: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginBottom: 8,
-  },
-  recommendedButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    width: '100%',
-    alignItems: 'center',
-  },
-  recommendedButtonText: {
-    color: colors.text,
-    fontSize: 12,
-    fontWeight: '600',
   },
   filterTab: {
     backgroundColor: colors.card,
     paddingVertical: 0,
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
     height: 40,
-    minWidth: 104,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
+    flexDirection: 'row',
+    gap: 6,
   },
   filterTabActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   filterText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
     color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 20,
-    letterSpacing: 0,
-    opacity: 1,
+    lineHeight: 18,
   },
   filterTextActive: {
-    color: 'rgba(255, 255, 255, 1)',
-    fontWeight: '600',
-    opacity: 1,
+    color: colors.text,
+    fontWeight: '700',
+  },
+  sortHint: {
+    color: colors.muted,
+    fontSize: 12,
+    paddingHorizontal: 20,
+    marginBottom: 4,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  priceListContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 24,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  disclaimer: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
+  opensHint: {
+    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: 4,
+    marginTop: 6,
   },
 });

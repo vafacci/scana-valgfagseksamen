@@ -1,90 +1,83 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
 export default function ListItem({ thumbnail, title, date, price }) {
+  const image = typeof thumbnail === 'string' ? { uri: thumbnail } : thumbnail;
+
   return (
     <View style={styles.container}>
       <View style={styles.thumbnailContainer}>
-        <View style={styles.thumbnailPlaceholder}>
-          <Text style={styles.thumbnailText}>📱</Text>
-        </View>
+        {image ? (
+          <Image source={image} style={styles.thumbnail} resizeMode="cover" />
+        ) : (
+          <MaterialIcons name="photo-camera" size={20} color={colors.muted} />
+        )}
       </View>
-      
+
       <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
         <View style={styles.details}>
-          <View style={styles.dateBadge}>
-            <Text style={styles.dateText}>{date}</Text>
-          </View>
-          <Text style={styles.price}>{price}</Text>
+          {date ? <Text style={styles.dateText}>{date}</Text> : null}
+          {price ? <Text style={styles.price}>{price}</Text> : null}
         </View>
       </View>
+
+      <MaterialIcons name="chevron-right" size={20} color={colors.muted} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   thumbnailContainer: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 8,
-    backgroundColor: colors.card,
-    marginRight: 12,
+    backgroundColor: colors.bg,
     overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  thumbnailPlaceholder: {
+  thumbnail: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  thumbnailText: {
-    fontSize: 20,
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   details: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  dateBadge: {
-    backgroundColor: colors.card,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
+    gap: 8,
   },
   dateText: {
     fontSize: 12,
     color: colors.muted,
   },
   price: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.primary,
   },
 });

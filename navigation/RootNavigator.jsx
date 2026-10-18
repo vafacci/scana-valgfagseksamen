@@ -1,750 +1,237 @@
-import React, { useEffect, useRef } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, TouchableOpacity, Text, StyleSheet, Dimensions, Animated } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import Svg, { Path } from 'react-native-svg';
-import * as Haptics from 'expo-haptics';
+import React, { useState } from 'react';
+import {
+  createNavigatorFactory,
+  StackRouter,
+  useNavigationBuilder,
+} from '@react-navigation/native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import Tap from '../components/Tap';
 import { colors } from '../theme/colors';
 import { useLanguage } from '../store/LanguageContext';
+import { useAuth } from '../store/useAuth';
 import HomeScreen from '../screens/HomeScreen';
+import LoginScreen from '../screens/auth/LoginScreen';
+import SignupScreen from '../screens/auth/SignupScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import CameraScreen from '../screens/CameraScreen';
+import IdentifyScreen from '../screens/IdentifyScreen';
 import SuccessScreen from '../screens/SuccessScreen';
 import ResultsScreen from '../screens/ResultsScreen';
+import LegalScreen from '../screens/LegalScreen';
 
-const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+function IsolatedStackNavigator({ id, initialRouteName, children, screenOptions }) {
+  const { state, descriptors, NavigationContent } = useNavigationBuilder(StackRouter, {
+    id,
+    initialRouteName,
+    children,
+    screenOptions,
+  });
+  const active = state.routes[state.index];
+  const descriptor = active ? descriptors[active.key] : null;
 
-function TabNavigator() {
-  const screenWidth = Dimensions.get('window').width;
-  const { t, language } = useLanguage();
+  return (
+    <NavigationContent>
+      <View style={styles.stackRoot}>{descriptor ? descriptor.render() : null}</View>
+    </NavigationContent>
+  );
+}
 
-  const WaveNavigationBar = ({ state, descriptors, navigation }) => {
-    console.log('WaveNavigationBar props:', { state, descriptors, navigation });
-    const currentRouteName = state?.routes?.[state.index]?.name;
-    
-    // Animation values
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const waveAnim = useRef(new Animated.Value(0)).current;
-    const buttonAnimations = useRef({
-      home: new Animated.Value(1),
-      favorites: new Animated.Value(1),
-      scan: new Animated.Value(1),
-      profile: new Animated.Value(1),
-      settings: new Animated.Value(1),
-    }).current;
-    
-    // Morphing icon animations
-    const iconMorphAnimations = useRef({
-      home: new Animated.Value(0),
-      favorites: new Animated.Value(0),
-      scan: new Animated.Value(0),
-      profile: new Animated.Value(0),
-      settings: new Animated.Value(0),
-    }).current;
-    
-    // Removed problematic wave animation
+const Stack = createNavigatorFactory(IsolatedStackNavigator)();
 
-    const animateButtonPress = (buttonKey) => {
-      // Haptic feedback
-      if (buttonKey === 'scan') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+const TABS = [
+  { key: 'home', route: 'HomeTab', icon: 'home', iconActive: 'home', labelKey: 'home' },
+  { key: 'favorites', route: 'FavoritesTab', icon: 'favorite-border', iconActive: 'favorite', labelKey: 'favorites' },
+  { key: 'scan', route: 'Camera', icon: 'photo-camera', labelKey: 'camera', scan: true },
+  { key: 'profile', route: 'ProfileTab', icon: 'person-outline', iconActive: 'person', labelKey: 'profile' },
+  { key: 'settings', route: 'SettingsTab', icon: 'settings', iconActive: 'settings', labelKey: 'settings' },
+];
+
+function TabButton({ label, active, onPress, children }) {
+  return (
+    <Tap
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+      onPress={onPress}
+      style={styles.tabSlot}
+    >
+      {children}
+      <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
+    </Tap>
+  );
+}
+
+function WebMainTabs({ navigation }) {
+  const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState('HomeTab');
+
+  const screenNav = {
+    navigate: (name, params) => {
+      if (name === 'HomeTab' || name === 'FavoritesTab' || name === 'ProfileTab' || name === 'SettingsTab') {
+        setTab(name);
+        return;
       }
-      
-      // Button scale animation
-      Animated.sequence([
-        Animated.timing(buttonAnimations[buttonKey], {
-          toValue: 0.8,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.spring(buttonAnimations[buttonKey], {
-          toValue: 1,
-          tension: 300,
-          friction: 10,
-          useNativeDriver: true,
-        }),
-      ]).start();
-      
-      // Icon morphing animation (only for scan)
-      if (buttonKey === 'scan') {
-        const morphDuration = 600;
-        Animated.sequence([
-          Animated.timing(iconMorphAnimations[buttonKey], {
-            toValue: 1,
-            duration: morphDuration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(iconMorphAnimations[buttonKey], {
-            toValue: 0,
-            duration: morphDuration,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    };
+      navigation.navigate(name, params);
+    },
+    goBack: () => navigation.goBack(),
+    getParent: () => navigation,
+    addListener: (...args) => navigation.addListener(...args),
+    setOptions: (...args) => navigation.setOptions?.(...args),
+  };
 
-    const handleNavigation = (screenName, buttonKey) => {
-      // Haptic feedback only; no visual button animations
-      if (buttonKey === 'scan') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
+  const openTab = (route) => {
+    setTab(route);
+  };
 
-      if (screenName === 'Camera') {
-        navigation.navigate(screenName);
-      } else {
-        navigation.jumpTo(screenName);
-      }
-    };
-    
-    return (
-      <Animated.View style={[styles.waveContainer, { transform: [{ scale: scaleAnim }] }]}>
-        <Svg height="100" width={screenWidth} style={styles.waveSvg}>
-          <Path
-            d={`M0,15 L${screenWidth/2 - 80},15 Q${screenWidth/2 - 60},15 ${screenWidth/2 - 50},35 Q${screenWidth/2 - 30},85 ${screenWidth/2},85 Q${screenWidth/2 + 30},85 ${screenWidth/2 + 50},35 Q${screenWidth/2 + 60},15 ${screenWidth/2 +80},15 L${screenWidth},15 L${screenWidth},100 L0,100 Z`}
-            fill="white"
-          />
-        </Svg>
-        
-        {/* Navigation Items */}
-        <View style={styles.navItemsContainer}>
-          {/* Left Side Items */}
-          <View style={styles.leftNavItems}>
-            <TouchableOpacity 
-              style={styles.navItem} 
-              onPress={() => handleNavigation('HomeTab', 'home')}
-            >
-              <View style={styles.buttonContainer}>
-                
-                <Animated.View style={{ 
-                  transform: [
-                    { scale: buttonAnimations.home }
-                  ] 
-                }}>
-                  <Text style={[styles.tabIcon, currentRouteName === 'HomeTab' && styles.tabIconActive]}>🏠</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 12 }, currentRouteName === 'HomeTab' && styles.tabLabelActive]}>{t('home')}</Text>
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.navItem} 
-              onPress={() => handleNavigation('FavoritesTab', 'favorites')}
-            >
-              <View style={styles.buttonContainer}>
-                
-                <Animated.View style={{ 
-                  transform: [
-                    { scale: buttonAnimations.favorites }
-                  ] 
-                }}>
-                  <Text style={[styles.tabIcon, currentRouteName === 'FavoritesTab' && styles.tabIconActive]}>❤️</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 4 }, currentRouteName === 'FavoritesTab' && styles.tabLabelActive]}>{t('favorites')}</Text>
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Scan Button */}
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => handleNavigation('Camera', 'scan')}
-          >
-            <View style={styles.scanButtonContainer}>
-              
-              <Animated.View style={{ 
-                transform: [
-                  { scale: buttonAnimations.scan },
-                  { 
-                    rotateZ: iconMorphAnimations.scan.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '720deg'],
-                    })
-                  },
-                  {
-                    scaleX: iconMorphAnimations.scan.interpolate({
-                      inputRange: [0, 0.3, 0.7, 1],
-                      outputRange: [1, 1.1, 0.9, 1],
-                    })
-                  },
-                  {
-                    scaleY: iconMorphAnimations.scan.interpolate({
-                      inputRange: [0, 0.3, 0.7, 1],
-                      outputRange: [1, 0.9, 1.1, 1],
-                    })
-                  }
-                ] 
-              }}>
-              <View style={styles.scannerIcon}>
-                <View style={styles.scannerInner}>
-                  <View style={styles.scannerCorners}>
-                    <View style={[styles.corner, styles.topLeft]} />
-                    <View style={[styles.corner, styles.topRight]} />
-                    <View style={[styles.corner, styles.bottomLeft]} />
-                    <View style={[styles.corner, styles.bottomRight]} />
-                  </View>
-                </View>
-              </View>
-              <Text style={styles.scanLabel}>SCAN</Text>
-              </Animated.View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Right Side Items */}
-          <View style={styles.rightNavItems}>
-            <TouchableOpacity 
-              style={styles.navItem} 
-              onPress={() => handleNavigation('ProfileTab', 'profile')}
-            >
-              <View style={styles.buttonContainer}>
-                
-                <Animated.View style={{ 
-                  transform: [
-                    { scale: buttonAnimations.profile }
-                  ] 
-                }}>
-                  <Text style={[styles.tabIcon, currentRouteName === 'ProfileTab' && styles.tabIconActive]}>👤</Text>
-                  <Text style={[styles.tabLabel, { marginLeft: 10 }, currentRouteName === 'ProfileTab' && styles.tabLabelActive]}>{t('profile')}</Text>
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.navItem} 
-              onPress={() => handleNavigation('SettingsTab', 'settings')}
-            >
-              <View style={styles.buttonContainer}>
-                
-                <Animated.View style={{ 
-                  transform: [
-                    { scale: buttonAnimations.settings }
-                  ] 
-                }}>
-                  <Text style={[styles.tabIcon, currentRouteName === 'SettingsTab' && styles.tabIconActive]}>⚙</Text>
-                  <Text style={[styles.tabLabel, currentRouteName === 'SettingsTab' && styles.tabLabelActive]}>{t('settings')}</Text>
-                </Animated.View>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Animated.View>
-    );
+  const openScan = () => {
+    navigation.navigate('Camera');
   };
 
   return (
-    <Tab.Navigator
-      key={language} // Force re-render when language changes
-      initialRouteName="HomeTab"
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { 
-          display: 'none',
-          height: 0,
-          opacity: 0,
-        },
-        tabBarButton: () => null,
-        animationEnabled: true,
-        animationTypeForReplace: 'push',
-        cardStyleInterpolator: ({ current, layouts }) => {
-          return {
-            cardStyle: {
-              transform: [
-                {
-                  translateX: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [layouts.screen.width * 0.3, 0],
-                  }),
-                },
-                {
-                  rotateY: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['15deg', '0deg'],
-                  }),
-                },
-                {
-                  scale: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.95, 1],
-                  }),
-                },
-              ],
-              opacity: current.progress.interpolate({
-                inputRange: [0, 0.5, 1],
-                outputRange: [0, 0.8, 1],
-              }),
-            },
-          };
-        },
-      }}
-      tabBar={(props) => <WaveNavigationBar {...props} />}
-    >
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: t('home'),
-          tabBarIcon: ({ color }) => (
-            <Text style={[styles.tabIcon, { color }]}>🏠</Text>
-          ),
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-layouts.screen.width * 0.2, 0],
-                    }),
-                  },
-                  {
-                    rotateZ: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['-5deg', '0deg'],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 0.3, 1],
-                  outputRange: [0, 0.7, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
-      
-      <Tab.Screen
-        name="FavoritesTab"
-        component={FavoritesScreen}
-        options={{
-          tabBarLabel: t('favorites'),
-          tabBarIcon: ({ color }) => (
-            <Text style={[styles.tabIcon, { color }]}>❤️</Text>
-          ),
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateY: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.height * 0.1, 0],
-                    }),
-                  },
-                  {
-                    rotateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['10deg', '0deg'],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.85, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 0.4, 1],
-                  outputRange: [0, 0.6, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
-      
-      <Tab.Screen
-        name="ScanTab"
-        component={View}
-        options={{
-          tabBarLabel: '',
-          tabBarIcon: () => <ScanButton />,
-          tabBarButton: () => <ScanButton />,
-        }}
-      />
-      
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: t('profile'),
-          tabBarIcon: ({ color }) => (
-            <Text style={[styles.tabIcon, { color }]}>👤</Text>
-          ),
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.width * 0.2, 0],
-                    }),
-                  },
-                  {
-                    rotateY: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['-15deg', '0deg'],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.9, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 0.2, 1],
-                  outputRange: [0, 0.8, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
-      
-      <Tab.Screen
-        name="SettingsTab"
-        component={SettingsScreen}
-        options={{
-          tabBarLabel: t('settings'),
-          tabBarIcon: ({ color }) => (
-            <Text style={[styles.tabIcon, { color }]}>⚙</Text>
-          ),
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateY: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [-layouts.screen.height * 0.1, 0],
-                    }),
-                  },
-                  {
-                    rotateZ: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['5deg', '0deg'],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0, 0.5, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
-    </Tab.Navigator>
+    <View style={styles.tabRoot}>
+      <View style={styles.tabScene}>
+        {tab === 'HomeTab' ? <HomeScreen navigation={screenNav} /> : null}
+        {tab === 'FavoritesTab' ? <FavoritesScreen navigation={screenNav} /> : null}
+        {tab === 'ProfileTab' ? <ProfileScreen navigation={screenNav} /> : null}
+        {tab === 'SettingsTab' ? <SettingsScreen navigation={screenNav} /> : null}
+      </View>
+      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        {TABS.map((item) => {
+          const label = t(item.labelKey);
+          if (item.scan) {
+            return (
+              <TabButton key={item.key} label={label} onPress={openScan}>
+                <View style={styles.scanBtn}>
+                  <MaterialIcons name="photo-camera" size={22} color="#FFFFFF" />
+                </View>
+              </TabButton>
+            );
+          }
+          const active = tab === item.route;
+          return (
+            <TabButton key={item.key} label={label} active={active} onPress={() => openTab(item.route)}>
+              <MaterialIcons
+                name={active ? item.iconActive : item.icon}
+                size={22}
+                color={active ? colors.primary : 'rgba(169, 180, 195, 0.9)'}
+              />
+            </TabButton>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
 export default function RootNavigator() {
+  const { isLoggedIn, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={styles.boot}>
+        <Text style={styles.bootBrand}>SCANA</Text>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
-    <Stack.Navigator
-      initialRouteName="Tabs"
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: '#0F1B2B' },
-        animation: 'slide_from_right',
-        animationDuration: 400,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
-        presentation: 'card',
-        cardStyleInterpolator: ({ current, layouts }) => {
-          return {
-            cardStyle: {
-              transform: [
-                {
-                  translateX: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [layouts.screen.width, 0],
-                  }),
-                },
-                {
-                  rotateY: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ['45deg', '0deg'],
-                  }),
-                },
-                {
-                  scale: current.progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-              opacity: current.progress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, 1],
-              }),
-            },
-          };
-        },
-      }}
-    >
-      <Stack.Screen 
-        name="Tabs" 
-        component={TabNavigator}
-        options={{
-          animation: 'fade',
-          animationDuration: 500,
-        }}
-      />
-      <Stack.Screen 
-        name="Camera" 
-        component={CameraScreen}
-        options={{
-          headerShown: false,
-          animation: 'slide_from_bottom',
-          animationDuration: 250,
-          gestureEnabled: true,
-          gestureDirection: 'vertical',
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateY: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.height, 0],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.95, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
-      <Stack.Screen 
-        name="Success" 
-        component={SuccessScreen}
-        options={{
-          animation: 'fade',
-          animationDuration: 150,
-        }}
-      />
-      <Stack.Screen 
-        name="Results" 
-        component={ResultsScreen}
-        options={{
-          animation: 'slide_from_right',
-          animationDuration: 250,
-          gestureEnabled: true,
-          cardStyleInterpolator: ({ current, layouts }) => {
-            return {
-              cardStyle: {
-                transform: [
-                  {
-                    translateX: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [layouts.screen.width, 0],
-                    }),
-                  },
-                  {
-                    scale: current.progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.95, 1],
-                    }),
-                  },
-                ],
-                opacity: current.progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 1],
-                }),
-              },
-            };
-          },
-        }}
-      />
+    <Stack.Navigator key={isLoggedIn ? 'app' : 'auth'}>
+      {isLoggedIn ? (
+        <>
+          <Stack.Screen name="Tabs" component={WebMainTabs} />
+          <Stack.Screen name="Camera" component={CameraScreen} />
+          <Stack.Screen name="Identify" component={IdentifyScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
+          <Stack.Screen name="Success" component={SuccessScreen} />
+          <Stack.Screen name="Results" component={ResultsScreen} />
+        </>
+      ) : (
+        <>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Signup" component={SignupScreen} />
+          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+          <Stack.Screen name="Legal" component={LegalScreen} />
+        </>
+      )}
     </Stack.Navigator>
   );
 }
 
 const styles = StyleSheet.create({
-  waveContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    marginTop: 40,
-    elevation: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -8,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-  },
-  waveSvg: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  navItemsContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-  },
-  leftNavItems: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 30,
+  stackRoot: {
     flex: 1,
-    justifyContent: 'flex-start',
   },
-  rightNavItems: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 30,
+  tabRoot: {
     flex: 1,
-    justifyContent: 'flex-end',
   },
-  navItem: {
+  tabScene: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  boot: {
+    flex: 1,
+    backgroundColor: colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 16,
   },
-  scanButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 5,
-  },
-  scannerIcon: {
-    width: 65,
-    height: 65,
-    backgroundColor: colors.primary,
-    borderRadius: 32.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 0,
-    elevation: 15,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  scannerInner: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scannerCorners: {
-    width: 32,
-    height: 32,
-    position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderColor: 'white',
-    borderWidth: 2,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-  },
-  scanLabel: {
-    fontSize: 14,
+  bootBrand: {
+    color: colors.text,
+    fontSize: 22,
     fontWeight: '800',
-    color: "#fff",
-    marginTop: 8,
-    textAlign: 'center',
-    width: 65,
-    textShadowColor: "#000",
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 2,
+    letterSpacing: 4,
   },
-  tabIcon: {
-    fontSize: 16,
-    marginBottom: 4,
-    marginLeft: 12,
+  tabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F1B2B',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.14)',
+    paddingHorizontal: 4,
+    paddingTop: 8,
+    zIndex: 30,
+    ...Platform.select({
+      web: {
+        position: 'relative',
+        cursor: 'pointer',
+      },
+    }),
   },
-  tabIconActive: {
-    color: colors.primary,
+  tabSlot: {
+    flex: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 56,
+    gap: 3,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  scanBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '500',
-    color: '#999999',
+    color: 'rgba(169, 180, 195, 0.95)',
   },
   tabLabelActive: {
     color: colors.primary,
-    fontWeight: '800',
-  },
-  buttonContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontWeight: '700',
   },
 });

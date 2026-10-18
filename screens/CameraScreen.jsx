@@ -1,383 +1,339 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ActivityIndicator, Animated, Image, StatusBar } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import React, { Component, useState, useRef, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Image,
+  StatusBar,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
-import { useScanHistory } from '../store/useScanHistory';
-import { useUserProfile } from '../store/useUserProfile';
 import { useLanguage } from '../store/LanguageContext';
-// import { identifyProduct, searchProducts } from '../services/productRecognition'; // DISABLED - Using demo products only for 100% free solution
 
-const SCAN_COUNT_KEY = '@scana_scan_count';
+const PERMISSION_WAIT_MS = 2500;
 
-// Mock AI Product Recognition Database
-const AI_PRODUCT_DATABASE = {
-  'airpods': {
-    name: 'Apple AirPods Pro (2nd Gen)',
-    price: '1,899 kr',
-    category: 'Electronics',
-    description: 'Active noise cancellation with Adaptive Transparency',
-    image: require('../assets/airpods-pro.jpeg'),
-    confidence: 0.95
-  },
-  'samsung_buds': {
-    name: 'Samsung Galaxy Buds Pro',
-    price: '1,299 kr',
-    category: 'Electronics',
-    description: 'Active noise cancellation and ambient sound',
-    image: require('../assets/pic2.jpg'),
-    confidence: 0.92
-  },
-  'sony_headphones': {
-    name: 'Sony WH-1000XM5',
-    price: '2,799 kr',
-    category: 'Electronics',
-    description: 'Industry-leading noise canceling with V1 processor',
-    image: require('../assets/sony-wh.webp'),
-    confidence: 0.88
-  },
-  'iphone': {
-    name: 'iPhone 15 Pro',
-    price: '9,999 kr',
-    category: 'Electronics',
-    description: 'Titanium design with A17 Pro chip',
-    image: require('../assets/iphone 15.webp'),
-    confidence: 0.97
-  },
-  'macbook': {
-    name: 'MacBook Pro 16"',
-    price: '19,999 kr',
-    category: 'Electronics',
-    description: 'M3 Pro chip with advanced processing power',
-    image: require('../assets/macbook.jpeg'),
-    confidence: 0.94
-  },
-  'ipad': {
-    name: 'iPad Pro 12.9"',
-    price: '12,499 kr',
-    category: 'Electronics',
-    description: 'M2 chip with Liquid Retina XDR display',
-    image: require('../assets/pic1.jpg'),
-    confidence: 0.91
+class CameraPreviewGuard extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
   }
-};
+
+  componentDidCatch() {
+    this.props.onError?.();
+  }
+
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
 
 export default function CameraScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState('back');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [processingStep, setProcessingStep] = useState('');
   const [capturedImageUri, setCapturedImageUri] = useState(null);
-  const [scanCount, setScanCount] = useState(0); // Track number of scans for rotation
+  const [availabilityChecked, setAvailabilityChecked] = useState(false);
+  const [cameraSupported, setCameraSupported] = useState(Platform.OS !== 'web');
+  const [cameraFailed, setCameraFailed] = useState(false);
+  const [permissionWaitExceeded, setPermissionWaitExceeded] = useState(false);
   const cameraRef = useRef(null);
-  const { addScan } = useScanHistory();
-  const { updateElo } = useUserProfile();
+  const processingRef = useRef(false);
   const { t } = useLanguage();
 
-  // Load scan count from storage on mount
+  const liveCamera =
+    availabilityChecked &&
+    cameraSupported &&
+    !cameraFailed &&
+    Boolean(permission?.granted);
+
   useEffect(() => {
-    loadScanCount();
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const available = await CameraView.isAvailableAsync();
+        if (!cancelled) {
+          setCameraSupported(Boolean(available));
+        }
+      } catch {
+        if (!cancelled) {
+          setCameraSupported(Platform.OS !== 'web');
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailabilityChecked(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Hide status bar for fullscreen camera
   useEffect(() => {
-    StatusBar.setHidden(true, 'slide');
+    if (!availabilityChecked || !cameraSupported || cameraFailed || permission) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setPermissionWaitExceeded(true);
+    }, PERMISSION_WAIT_MS);
+
+    return () => clearTimeout(timer);
+  }, [availabilityChecked, cameraSupported, cameraFailed, permission]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return undefined;
+    StatusBar.setHidden(liveCamera, 'slide');
     return () => {
       StatusBar.setHidden(false, 'slide');
     };
-  }, []);
+  }, [liveCamera]);
 
-  const loadScanCount = async () => {
-    try {
-      const count = await AsyncStorage.getItem(SCAN_COUNT_KEY);
-      if (count !== null) {
-        setScanCount(parseInt(count));
-        console.log(`🔥 Loaded scan count from storage: ${count}`);
-      }
-    } catch (error) {
-      console.error('Error loading scan count:', error);
+  const goBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
     }
-  };
+    navigation.navigate('Tabs');
+  }, [navigation]);
 
-  if (!permission) {
-    // Camera permissions are still loading
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.message}>Loading camera permissions...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const goToIdentify = useCallback(
+    (photoUri) => {
+      navigation.replace('Identify', { photoUri: photoUri || null });
+    },
+    [navigation]
+  );
 
-  if (!permission.granted) {
-    // Camera permissions are not granted yet
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.content}>
-          <Text style={styles.message}>We need your permission to show the camera</Text>
-          <TouchableOpacity style={styles.button} onPress={requestPermission}>
-            <Text style={styles.buttonText}>Grant Permission</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const pickImageFromAlbum = useCallback(async () => {
+    if (processingRef.current) return;
 
-  // AI Image Recognition Function - Uses DEMO products (100% FREE solution)
-  const analyzeImageWithAI = async (imageUri) => {
-    setProcessingStep(t('processing'));
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    console.log('Analyzing image with AI...', imageUri);
-    setProcessingStep(t('analyzing'));
-    await new Promise(resolve => setTimeout(resolve, 700));
-    
-    setProcessingStep(t('identifying'));
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    setProcessingStep(t('searching'));
-    await new Promise(resolve => setTimeout(resolve, 400));
-    
-    // Return demo product data (100% FREE solution)
-    // In a real app, you would call an API here, but for your project this works perfectly!
-    return {
-      success: false,
-      fallback: true, // This triggers demo products
-    };
-  };
-
-  const takePictureAndAnalyze = async () => {
-    if (isProcessing) return;
-    
-    setIsProcessing(true);
-    setProcessingStep(t('processing'));
-    
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
-        base64: false,
-      });
-      
-      console.log('Photo taken, analyzing with AI...', photo.uri);
-      setCapturedImageUri(photo.uri);
-      
-      try {
-        // Analyze image with AI (uses demo products - 100% FREE)
-        const analysisResult = await analyzeImageWithAI(photo.uri);
-        
-        // Always use demo products for 100% free solution
-        // In a real app, this would call an API, but for your project demo products work perfectly!
-        useDemoProduct();
-      } catch (error) {
-        console.error('Error in analysis:', error);
-        // Use demo product on error
-        useDemoProduct();
-      }
-      
-      async function useDemoProduct() {
-        // Rotate through demo products based on scan count
-        const productKeys = ['airpods', 'samsung_buds', 'sony_headphones', 'iphone', 'macbook', 'ipad'];
-        
-        // Capture current scan count BEFORE selecting product
-        const currentScanCount = scanCount;
-        const currentIndex = currentScanCount % productKeys.length;
-        const selectedKey = productKeys[currentIndex];
-        const demoProduct = AI_PRODUCT_DATABASE[selectedKey];
-        
-        console.log(`🔥 SCAN DEBUG: scanCount=${scanCount}, currentScanCount=${currentScanCount}, index=${currentIndex}, selectedKey=${selectedKey}`);
-        console.log(`Using demo product: ${selectedKey} (scan #${currentScanCount + 1}, index: ${currentIndex})`);
-        
-        await addScan({
-          productName: demoProduct.name,
-          price: demoProduct.price,
-          category: demoProduct.category,
-          description: demoProduct.description,
-          image: demoProduct.image,
-          confidence: demoProduct.confidence,
-          photoUri: photo.uri
-        }, updateElo);
-        
-        // Save new count to storage
-        const newCount = currentScanCount + 1;
-        await AsyncStorage.setItem(SCAN_COUNT_KEY, newCount.toString());
-        console.log(`🔥 Saved scan count to storage: ${newCount}`);
-        
-        // Update local state too
-        setScanCount(newCount);
-        
-        navigation.replace('Success', { 
-          product: demoProduct,
-          analysis: { confidence: demoProduct.confidence },
-          photoUri: photo.uri
-        });
-      }
-    }
-    
-    setIsProcessing(false);
-    setProcessingStep('');
-  };
-
-  const pickImageFromAlbum = async () => {
-    if (isProcessing) return;
-    
-    setIsProcessing(true);
-    setProcessingStep(t('openingAlbum'));
-    
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
+        mediaTypes: ['images'],
+        allowsEditing: Platform.OS !== 'web',
         aspect: [4, 3],
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const imageUri = result.assets[0].uri;
-        setCapturedImageUri(imageUri);
-        
-        setProcessingStep(t('processing'));
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        setProcessingStep(t('analyzing'));
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        setProcessingStep(t('identifying'));
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        setProcessingStep(t('searching'));
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Navigate directly to success screen without showing success in CameraScreen
-        
-        // Rotate through demo products for album images too
-        const productKeys = ['airpods', 'samsung_buds', 'sony_headphones', 'iphone', 'macbook', 'ipad'];
-        // Capture current scan count before incrementing
-        const currentScanCount = scanCount;
-        const currentIndex = currentScanCount % productKeys.length;
-        const selectedKey = productKeys[currentIndex];
-        const demoProduct = AI_PRODUCT_DATABASE[selectedKey];
-        
-        console.log(`Using demo product from album: ${selectedKey} (scan #${currentScanCount + 1}, index: ${currentIndex})`);
-        
-        // Save scan to history
-        await addScan({
-          productName: demoProduct.name,
-          price: demoProduct.price,
-          category: demoProduct.category,
-          description: demoProduct.description,
-          image: demoProduct.image,
-          confidence: demoProduct.confidence,
-          photoUri: imageUri
-        }, updateElo);
-        
-        // Save new count to storage
-        const newCount = currentScanCount + 1;
-        await AsyncStorage.setItem(SCAN_COUNT_KEY, newCount.toString());
-        console.log(`🔥 Saved scan count to storage (album): ${newCount}`);
-        
-        // Update local state too
-        setScanCount(newCount);
-        
-        // Navigate to success screen
-        navigation.replace('Success', { 
-          product: demoProduct,
-          analysis: { confidence: demoProduct.confidence },
-          photoUri: imageUri
-        });
-      } else {
-        setIsProcessing(false);
-        setProcessingStep('');
+      if (result.canceled || !result.assets?.[0]) {
+        return;
       }
+
+      goToIdentify(result.assets[0].uri);
     } catch (error) {
       console.error('Error picking image:', error);
+      processingRef.current = false;
       setIsProcessing(false);
-      setProcessingStep('');
     }
-  };
+  }, [goToIdentify]);
 
-  const toggleCameraFacing = () => {
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
-  };
+  const takePictureAndAnalyze = useCallback(async () => {
+    if (processingRef.current) return;
+
+    if (!liveCamera || !cameraRef.current) {
+      await pickImageFromAlbum();
+      return;
+    }
+
+    processingRef.current = true;
+    setIsProcessing(true);
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        base64: false,
+      });
+
+      setCapturedImageUri(photo.uri);
+      goToIdentify(photo.uri);
+    } catch (error) {
+      console.error('Camera capture failed, falling back to album', error);
+      processingRef.current = false;
+      setIsProcessing(false);
+      await pickImageFromAlbum();
+    }
+  }, [liveCamera, goToIdentify, pickImageFromAlbum]);
+
+  const handleRequestPermission = useCallback(async () => {
+    try {
+      const result = await requestPermission();
+      if (!result?.granted) {
+        setCameraFailed(false);
+      }
+    } catch (error) {
+      console.error('Camera permission request failed', error);
+      setCameraFailed(true);
+    }
+  }, [requestPermission]);
+
+  const toggleCameraFacing = useCallback(() => {
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
+  }, []);
+
+  const handleCameraError = useCallback(() => {
+    setCameraFailed(true);
+  }, []);
+
+  const closeButton = (
+    <TouchableOpacity
+      style={[styles.closeButton, { top: Math.max(insets.top, 16) + 8 }]}
+      onPress={goBack}
+      accessibilityRole="button"
+      accessibilityLabel={t('close')}
+    >
+      <MaterialIcons name="close" size={22} color={colors.text} />
+    </TouchableOpacity>
+  );
+
+  const processingOverlay = isProcessing ? (
+    <View style={styles.processingOverlay}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  ) : null;
+
+  if (!availabilityChecked || (cameraSupported && !cameraFailed && !permission && !permissionWaitExceeded)) {
+    return (
+      <View style={styles.container}>
+        {closeButton}
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.message}>{t('loading')}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!liveCamera) {
+    const showGrantCamera = cameraSupported && !cameraFailed && !permission?.granted;
+
+    return (
+      <View style={styles.container}>
+        {closeButton}
+        <View style={styles.content}>
+          <View style={styles.permissionIcon}>
+            <MaterialIcons
+              name={showGrantCamera ? 'photo-camera' : 'videocam-off'}
+              size={32}
+              color={colors.primary}
+            />
+          </View>
+          <Text style={styles.message}>
+            {showGrantCamera ? t('cameraPermission') : t('cameraUnavailable')}
+          </Text>
+
+          {showGrantCamera ? (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleRequestPermission}
+              accessibilityRole="button"
+              accessibilityLabel={t('grantPermission')}
+            >
+              <MaterialIcons name="photo-camera" size={20} color={colors.text} />
+              <Text style={styles.buttonText}>{t('grantPermission')}</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.button, showGrantCamera && styles.secondaryButton, isProcessing && styles.buttonDisabled]}
+            onPress={pickImageFromAlbum}
+            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('pickFromAlbum')}
+          >
+            <MaterialIcons name="photo-library" size={20} color={colors.text} />
+            <Text style={styles.buttonText}>{t('pickFromAlbum')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.tertiaryButton, isProcessing && styles.buttonDisabled]}
+            onPress={() => goToIdentify(null)}
+            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('pickFromCatalog')}
+          >
+            <MaterialIcons name="inventory-2" size={20} color={colors.text} />
+            <Text style={styles.buttonText}>{t('pickFromCatalog')}</Text>
+          </TouchableOpacity>
+        </View>
+        {processingOverlay}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Back button - Fullscreen */}
-      <TouchableOpacity 
-        style={styles.frozenBackButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Text style={styles.backArrow}>←</Text>
-      </TouchableOpacity>
+      {closeButton}
 
-      {/* Camera View - Fullscreen */}
-      {capturedImageUri && isProcessing ? (
-        <Image 
-          source={{ uri: capturedImageUri }}
-          style={styles.fullscreenImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <CameraView 
-          style={styles.fullscreenImage} 
-          facing={facing}
-          ref={cameraRef}
-        >
-          <View style={styles.scanOverlay}>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-        </View>
-            <Text style={styles.scanInstruction}>
-              {t('cameraInstruction')}
-            </Text>
+      <View style={styles.preview}>
+        {capturedImageUri && isProcessing ? (
+          <Image
+            source={{ uri: capturedImageUri }}
+            style={styles.fullscreenImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <CameraPreviewGuard onError={handleCameraError}>
+            <CameraView
+              style={styles.fullscreenImage}
+              facing={facing}
+              ref={cameraRef}
+              animateShutter={false}
+              onMountError={handleCameraError}
+            />
+          </CameraPreviewGuard>
+        )}
+
+        <View style={styles.scanOverlay} pointerEvents="none">
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
           </View>
-        </CameraView>
-      )}
-
-      {/* Processing overlay - Fullscreen */}
-      {isProcessing && (
-        <View style={styles.processingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.processingText}>{processingStep}</Text>
-          <View style={styles.progressSteps}>
-            <View style={[styles.step, processingStep.includes(t('processing')) && styles.stepActive]} />
-            <View style={[styles.step, processingStep.includes(t('analyzing')) && styles.stepActive]} />
-            <View style={[styles.step, processingStep.includes(t('identifying')) && styles.stepActive]} />
-            <View style={[styles.step, processingStep.includes(t('searching')) && styles.stepActive]} />
-          </View>
+          <Text style={styles.scanInstruction}>{t('cameraInstruction')}</Text>
         </View>
-      )}
+      </View>
 
-      {/* Camera Controls */}
+      {processingOverlay}
+
       {!isProcessing && (
-        <View style={styles.controls}>
-          <TouchableOpacity 
+        <View style={[styles.controls, { paddingBottom: Math.max(insets.bottom, 16) + 20 }]}>
+          <TouchableOpacity
             style={styles.controlButton}
             onPress={pickImageFromAlbum}
-            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('pickFromAlbum')}
           >
-            <Text style={styles.controlIcon}>📷</Text>
+            <MaterialIcons name="photo-library" size={24} color={colors.text} />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.shutterButton, isProcessing && styles.shutterButtonDisabled]} 
+
+          <TouchableOpacity
+            style={styles.shutterButton}
             onPress={takePictureAndAnalyze}
-            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('capturePhoto')}
           >
             <View style={styles.shutterInner} />
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.controlButton} 
+
+          <TouchableOpacity
+            style={styles.controlButton}
             onPress={toggleCameraFacing}
-            disabled={isProcessing}
+            accessibilityRole="button"
+            accessibilityLabel={t('flipCamera')}
           >
-            <Text style={styles.controlIcon}>🔄</Text>
+            <MaterialIcons name="cameraswitch" size={24} color={colors.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -392,56 +348,25 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.bg,
   },
-  fullscreenImage: {
-    width: '100%',
-    height: '100%',
-  },
-  camera: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
+  preview: {
     flex: 1,
+    backgroundColor: colors.bg,
   },
-  topSection: {
+  fullscreenImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  closeButton: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 50,
-    paddingBottom: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 10,
-  },
-  backArrow: {
-    color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  frozenBackButton: {
-    position: 'absolute',
-    top: 40,
     left: 20,
     zIndex: 1000,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 22,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  topLabel: {
-    color: colors.muted,
-    fontSize: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 27, 43, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -449,51 +374,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
   },
+  permissionIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   message: {
     fontSize: 16,
-    color: colors.text,
+    color: colors.muted,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 24,
   },
   button: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    minWidth: 240,
+  },
+  secondaryButton: {
+    marginTop: 12,
+    backgroundColor: colors.card,
+  },
+  tertiaryButton: {
+    marginTop: 12,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   buttonText: {
     color: colors.text,
     fontSize: 16,
     fontWeight: '600',
   },
-  cameraContainer: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
   scanOverlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
   },
   scanFrame: {
-    width: 300,
-    height: 300,
+    width: 260,
+    height: 260,
     position: 'relative',
   },
   scanInstruction: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    marginTop: 100,
-    paddingHorizontal: 20,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    marginTop: 28,
+    paddingHorizontal: 28,
+    lineHeight: 22,
+    textShadowColor: 'rgba(15, 27, 43, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   processingOverlay: {
     position: 'absolute',
@@ -501,129 +446,45 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(15, 27, 43, 0.55)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  processingText: {
-    color: colors.text,
-    fontSize: 20,
-    marginTop: 20,
-    textAlign: 'center',
-    fontWeight: '700',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  processingSubtext: {
-    color: colors.muted,
-    fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  progressSteps: {
-    flexDirection: 'row',
-    marginTop: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  step: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.muted,
-    marginHorizontal: 6,
-    opacity: 0.4,
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  stepActive: {
-    backgroundColor: colors.primary,
-    opacity: 1,
-    transform: [{ scale: 1.2 }],
-  },
-  successContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-  },
-  successIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  successIcon: {
-    fontSize: 40,
-    color: colors.text,
-  },
-  successText: {
-    color: colors.text,
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
-  },
-  successSubtext: {
-    color: colors.text,
-    fontSize: 18,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  confetti: {
-    position: 'absolute',
-    top: '50%',
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  confettiEmoji: {
-    fontSize: 24,
+    zIndex: 20,
   },
   corner: {
     position: 'absolute',
-    width: 25,
-    height: 25,
-    borderColor: colors.text,
-    borderWidth: 4,
+    width: 22,
+    height: 22,
+    borderColor: colors.primary,
+    borderWidth: 3,
   },
   topLeft: {
     top: 0,
     left: 0,
     borderRightWidth: 0,
     borderBottomWidth: 0,
+    borderTopLeftRadius: 4,
   },
   topRight: {
     top: 0,
     right: 0,
     borderLeftWidth: 0,
     borderBottomWidth: 0,
+    borderTopRightRadius: 4,
   },
   bottomLeft: {
     bottom: 0,
     left: 0,
     borderRightWidth: 0,
     borderTopWidth: 0,
+    borderBottomLeftRadius: 4,
   },
   bottomRight: {
     bottom: 0,
     right: 0,
     borderLeftWidth: 0,
     borderTopWidth: 0,
+    borderBottomRightRadius: 4,
   },
   controls: {
     position: 'absolute',
@@ -634,40 +495,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingHorizontal: 40,
-    paddingVertical: 30,
-    paddingBottom: 50,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    paddingTop: 24,
+    backgroundColor: 'rgba(15, 27, 43, 0.72)',
     zIndex: 10,
   },
   controlButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  controlIcon: {
-    fontSize: 24,
-  },
   shutterButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#FF3B30',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: colors.text,
   },
-  shutterButtonDisabled: {
-    backgroundColor: '#666',
-    borderColor: '#999',
-  },
   shutterInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.text,
   },
 });

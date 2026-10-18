@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Modal } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
+import AppModal from '../components/AppModal';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 import { useLanguage } from '../store/LanguageContext';
 
@@ -8,7 +9,6 @@ export default function LanguageSettingsScreen({ visible, onClose }) {
   const { language, changeLanguage, t, getAvailableLanguages } = useLanguage();
   const [selectedLanguage, setSelectedLanguage] = useState(language);
 
-  // Update selectedLanguage when language changes
   useEffect(() => {
     setSelectedLanguage(language);
   }, [language]);
@@ -16,89 +16,68 @@ export default function LanguageSettingsScreen({ visible, onClose }) {
   const handleLanguageSelect = async (langCode) => {
     setSelectedLanguage(langCode);
     await changeLanguage(langCode);
-    // Close the modal after language change
     setTimeout(() => {
       onClose();
     }, 500);
   };
 
-  const handleSave = () => {
-    onClose();
-  };
-
   const availableLanguages = getAvailableLanguages();
 
   return (
-    <Modal
+    <AppModal
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={onClose}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <TouchableOpacity style={styles.backButton} onPress={onClose}>
+            <MaterialIcons name="arrow-back" size={22} color={colors.text} />
             <Text style={styles.backText}>{t('back')}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Title */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>{t('language')}</Text>
           <Text style={styles.subtitle}>{t('selectLanguage')}</Text>
         </View>
 
-        {/* Language Options */}
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           <View style={styles.languageContainer}>
-            {availableLanguages.map((lang) => (
-              <TouchableOpacity
-                key={lang.code}
-                style={[
-                  styles.languageOption,
-                  selectedLanguage === lang.code && styles.languageOptionSelected
-                ]}
-                onPress={() => handleLanguageSelect(lang.code)}
-              >
-                <View style={styles.languageInfo}>
-                  <Text style={[
-                    styles.languageName,
-                    selectedLanguage === lang.code && styles.languageNameSelected
-                  ]}>
-                    {lang.nativeName}
-                  </Text>
-                  <Text style={[
-                    styles.languageCode,
-                    selectedLanguage === lang.code && styles.languageCodeSelected
-                  ]}>
-                    {lang.name}
-                  </Text>
-                </View>
-                
-                {selectedLanguage === lang.code && (
-                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-                )}
-              </TouchableOpacity>
-            ))}
+            {availableLanguages.map((lang) => {
+              const selected = selectedLanguage === lang.code;
+              return (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={styles.languageOption}
+                  onPress={() => handleLanguageSelect(lang.code)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                >
+                  <MaterialIcons name="translate" size={22} color={colors.muted} />
+                  <View style={styles.languageInfo}>
+                    <Text style={styles.languageName}>{lang.nativeName}</Text>
+                    <Text style={styles.languageCode}>{lang.name}</Text>
+                  </View>
+                  <MaterialIcons
+                    name={selected ? 'radio-button-checked' : 'radio-button-unchecked'}
+                    size={22}
+                    color={selected ? colors.primary : colors.muted}
+                  />
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {/* Save Button */}
           <View style={styles.saveContainer}>
-            <TouchableOpacity 
-              style={styles.saveButton}
-              onPress={handleSave}
-            >
+            <TouchableOpacity style={styles.saveButton} onPress={onClose}>
               <Text style={styles.saveButtonText}>{t('save')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </AppModal>
   );
 }
 
@@ -110,10 +89,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   backButton: {
     flexDirection: 'row',
@@ -125,62 +102,55 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   titleContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 24,
+    paddingBottom: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: colors.text,
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: colors.muted,
+    lineHeight: 22,
   },
   scrollView: {
     flex: 1,
   },
   languageContainer: {
-    paddingHorizontal: 20,
+    marginHorizontal: 24,
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    overflow: 'hidden',
   },
   languageOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  languageOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
   },
   languageInfo: {
     flex: 1,
   },
   languageName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
-  },
-  languageNameSelected: {
-    color: colors.primary,
+    marginBottom: 2,
   },
   languageCode: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.muted,
   },
-  languageCodeSelected: {
-    color: colors.primary,
-  },
   saveContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 24,
   },
   saveButton: {
@@ -192,6 +162,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.text,
   },
 });

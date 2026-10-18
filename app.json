@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "Scana",
+    "slug": "scana",
+    "scheme": "scana",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,7 +29,16 @@
       "edgeToEdgeEnabled": true
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Scana",
+      "shortName": "Scana",
+      "description": "Søg og sammenlign vejledende priser fra danske elektronikbutikker.",
+      "themeColor": "#3B6EF6",
+      "backgroundColor": "#0F1B2B",
+      "lang": "da",
+      "display": "standalone"
     },
     "plugins": [
       "expo-font"
