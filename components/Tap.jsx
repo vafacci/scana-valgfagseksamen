@@ -3,8 +3,10 @@ import { Platform, Pressable, StyleSheet } from 'react-native';
 
 /**
  * Web taps must NOT use TouchableOpacity/Pressable (RN global responder lock).
- * Use a div[role=button] — NOT <button>. Native <button> breaks RN-web flex
- * children (offer cards / filter labels collapse to empty boxes on iOS Safari).
+ * They must also NOT go through react-native-web's createElement:
+ * that helper ignores children passed as a third argument, and role="button"
+ * is rewritten to a native <button>, which collapses flex children to empty
+ * boxes on iOS Safari.
  */
 export default function Tap({
   onPress,
@@ -16,13 +18,13 @@ export default function Tap({
   accessibilityRole = 'button',
 }) {
   if (Platform.OS === 'web') {
-    const { unstable_createElement: createElement } = require('react-native-web');
     const activate = (event) => {
       event.preventDefault();
       event.stopPropagation();
       if (!disabled && onPress) onPress(event);
     };
-    return createElement(
+    const flat = StyleSheet.flatten([styles.webBase, style, disabled && styles.disabled]) || {};
+    return React.createElement(
       'div',
       {
         role: accessibilityRole || 'button',
@@ -34,9 +36,14 @@ export default function Tap({
         onKeyDown: (event) => {
           if (event.key === 'Enter' || event.key === ' ') activate(event);
         },
-        onStartShouldSetResponder: () => false,
-        onMoveShouldSetResponder: () => false,
-        style: [styles.webBase, style, disabled && styles.disabled],
+        style: {
+          ...flat,
+          display: flat.display || 'flex',
+          cursor: disabled ? 'default' : 'pointer',
+          touchAction: 'manipulation',
+          userSelect: 'none',
+          WebkitTapHighlightColor: 'transparent',
+        },
       },
       children
     );
@@ -58,14 +65,12 @@ export default function Tap({
 
 const styles = StyleSheet.create({
   webBase: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
     backgroundColor: 'transparent',
     borderWidth: 0,
     margin: 0,
     padding: 0,
-    cursor: 'pointer',
-    touchAction: 'manipulation',
-    WebkitTapHighlightColor: 'transparent',
-    userSelect: 'none',
   },
   disabled: {
     opacity: 0.5,

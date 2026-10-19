@@ -12,9 +12,6 @@ import { colors } from '../theme/colors';
 import { useLanguage } from '../store/LanguageContext';
 import { useAuth } from '../store/useAuth';
 import HomeScreen from '../screens/HomeScreen';
-import LoginScreen from '../screens/auth/LoginScreen';
-import SignupScreen from '../screens/auth/SignupScreen';
-import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -130,7 +127,7 @@ function WebMainTabs({ navigation }) {
 }
 
 export default function RootNavigator() {
-  const { isLoggedIn, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -142,24 +139,13 @@ export default function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator key={isLoggedIn ? 'app' : 'auth'}>
-      {isLoggedIn ? (
-        <>
-          <Stack.Screen name="Tabs" component={WebMainTabs} />
-          <Stack.Screen name="Camera" component={CameraScreen} />
-          <Stack.Screen name="Identify" component={IdentifyScreen} />
-          <Stack.Screen name="Legal" component={LegalScreen} />
-          <Stack.Screen name="Success" component={SuccessScreen} />
-          <Stack.Screen name="Results" component={ResultsScreen} />
-        </>
-      ) : (
-        <>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Signup" component={SignupScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="Legal" component={LegalScreen} />
-        </>
-      )}
+    <Stack.Navigator>
+      <Stack.Screen name="Tabs" component={WebMainTabs} />
+      <Stack.Screen name="Camera" component={CameraScreen} />
+      <Stack.Screen name="Identify" component={IdentifyScreen} />
+      <Stack.Screen name="Legal" component={LegalScreen} />
+      <Stack.Screen name="Success" component={SuccessScreen} />
+      <Stack.Screen name="Results" component={ResultsScreen} />
     </Stack.Navigator>
   );
 }
